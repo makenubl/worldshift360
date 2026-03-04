@@ -1,0 +1,3080 @@
+import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  User,
+  TrendingUp,
+  Globe,
+  AlertTriangle,
+  ChevronRight,
+  Zap,
+  Briefcase,
+  GitBranch,
+  Flame,
+  Waves,
+  Bot,
+  Banknote,
+  Binary,
+  Building2,
+  BookOpen,
+  Brain,
+  Eye,
+  Lock,
+  Unlock,
+  Sparkles,
+  Network,
+  Fingerprint,
+  Lightbulb,
+  MessageCircle,
+  ThumbsUp,
+  Send,
+  ChevronDown,
+  MapPin,
+  Star,
+  Share2,
+  Bookmark,
+  BarChart3,
+  CheckCircle2,
+  XCircle,
+  Compass,
+  Flag,
+  Image,
+} from "lucide-react";
+
+// ═══════════════════════════════════════════
+//  MINDSHIFT 360 v3 — SOCIAL INTELLIGENCE
+//  "Humanity's Collective Intelligence"
+// ═══════════════════════════════════════════
+
+const css = `
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  @keyframes wave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(2.2); } }
+  @keyframes countUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.4s ease forwards; }
+  .slide-up { animation: slideUp 0.3s ease forwards; }
+  .pop-in { animation: popIn 0.25s ease forwards; }
+  .pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+  .float-gentle { animation: float 6s ease-in-out infinite; }
+  .shimmer { background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.03) 50%, transparent 75%); background-size: 200% 100%; animation: shimmer 3s infinite; }
+
+  .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.06); }
+  .glass-hover:hover { background: rgba(17, 24, 39, 0.85); border-color: rgba(255,255,255,0.1); }
+  .card { background: rgba(17, 24, 39, 0.5); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; transition: border-color 0.2s; }
+  .card:hover { border-color: rgba(255,255,255,0.12); }
+
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  .text-gradient-green { background: linear-gradient(135deg, #10b981, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .text-gradient-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .text-gradient-multi { background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  .reaction-btn { transition: all 0.15s; padding: 4px 10px; border-radius: 20px; cursor: pointer; user-select: none; }
+  .reaction-btn:hover { transform: scale(1.1); }
+  .reaction-btn:active { transform: scale(0.95); }
+  .reaction-btn.active { background: rgba(16, 185, 129, 0.15); }
+
+  .comment-input { transition: all 0.2s; }
+  .comment-input:focus { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+
+  .trend-tag { transition: all 0.15s; }
+  .trend-tag:hover { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); transform: translateY(-1px); }
+
+  .feed-card { transition: all 0.2s; }
+  .feed-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+
+  @keyframes flowDash { from { stroke-dashoffset: 12; } to { stroke-dashoffset: 0; } }
+  @keyframes flowPulse { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.45; } }
+  .wealth-flow { stroke-dasharray: 4 8; animation: flowDash 2s linear infinite; }
+  .wealth-flow-glow { animation: flowPulse 3s ease-in-out infinite; }
+
+  @keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .influence-bar { transform-origin: left; animation: barGrow 1s ease-out forwards; }
+
+  @keyframes tickerSlide { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .ticker-item { animation: tickerSlide 0.5s ease forwards; }
+
+  @keyframes breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+  .breathe { animation: breathe 4s ease-in-out infinite; }
+`;
+
+// ── REACTIONS ──
+const REACTIONS = [
+  { emoji: "🔥", label: "Important", key: "fire" },
+  { emoji: "💡", label: "Insightful", key: "insight" },
+  { emoji: "😨", label: "Concerning", key: "concern" },
+  { emoji: "💪", label: "We can do this", key: "strength" },
+  { emoji: "🤔", label: "Need more info", key: "think" },
+];
+
+// ── SEED USERS ──
+const AVATARS = [
+  "🧑‍💻",
+  "👩‍⚕️",
+  "👨‍🌾",
+  "👩‍🏫",
+  "🧑‍✈️",
+  "👨‍💼",
+  "👩‍🔬",
+  "🧕",
+  "👨‍🎓",
+  "👩‍💻",
+  "🎖️",
+  "👷",
+];
+const USER_PROFILES = [
+  {
+    name: "Aisha Malik",
+    handle: "@aisha_dev",
+    avatar: "👩‍💻",
+    badge: "Tech",
+    location: "Toronto",
+    sector: "Technology/IT",
+    verified: true,
+  },
+  {
+    name: "Chukwu Adeyemi",
+    handle: "@chukwu_dev",
+    avatar: "🧑‍💻",
+    badge: "Backend",
+    location: "Lagos",
+    sector: "Technology/IT",
+    verified: true,
+  },
+  {
+    name: "Dr. Fatima Noor",
+    handle: "@dr_fatima",
+    avatar: "👩‍⚕️",
+    badge: "Health",
+    location: "São Paulo",
+    sector: "Healthcare",
+    verified: true,
+  },
+  {
+    name: "Muhammad Iqbal",
+    handle: "@iqbal_farmer",
+    avatar: "👨‍🌾",
+    badge: "Agriculture",
+    location: "Jakarta",
+    sector: "Agriculture",
+    verified: false,
+  },
+  {
+    name: "Sara Ahmed",
+    handle: "@sara_fintech",
+    avatar: "👩‍💼",
+    badge: "Finance",
+    location: "Berlin",
+    sector: "Finance",
+    verified: true,
+  },
+  {
+    name: "James Chen",
+    handle: "@james_freelance",
+    avatar: "🧑‍💻",
+    badge: "Freelancer",
+    location: "Tokyo",
+    sector: "Freelancing",
+    verified: false,
+  },
+  {
+    name: "Prof. Maria Santos",
+    handle: "@prof_maria",
+    avatar: "👩‍🏫",
+    badge: "Education",
+    location: "Mexico City",
+    sector: "Education",
+    verified: true,
+  },
+  {
+    name: "Nia Okafor",
+    handle: "@nia_builder",
+    avatar: "👷",
+    badge: "Infrastructure",
+    location: "Nairobi",
+    sector: "Construction",
+    verified: false,
+  },
+];
+
+// ── AI FEED POSTS ──
+const FEED_POSTS = [
+  {
+    id: "p1",
+    type: "ai_scenario",
+    aiTitle: "Global Call Centers Will Lose 60% of Jobs to AI by 2028",
+    aiBody:
+      "Here's what the data shows: GPT-level AI can now handle 80% of customer service queries better than humans. The global BPO sector employs millions across India, Philippines, Pakistan, and beyond — representing a $150B+ industry. The question isn't IF these jobs disappear, but WHAT replaces them.\n\nThe opportunity? These same people, retrained in AI prompt engineering and AI-assisted services, could earn 3-5x more. The global BPO sector could SHIFT to $250B in AI-augmented services — but only if workers upskill NOW.",
+    aiVerdict: "likely",
+    category: "technology",
+    severity: "critical",
+    reactions: { fire: 1847, insight: 923, concern: 2105, strength: 445, think: 612 },
+    comments: [
+      {
+        user: USER_PROFILES[0],
+        text: "Already seeing this at my company. We replaced 40 support agents with AI + 5 prompt engineers. Those 5 now earn more than the 40 combined. The transition is brutal but the math is clear.",
+        time: "2h ago",
+        likes: 342,
+        replies: [
+          {
+            user: USER_PROFILES[5],
+            text: "But what about the 40 who lost their jobs? Not everyone can become a prompt engineer. We need a transition plan, not just celebration of efficiency.",
+            time: "1h ago",
+            likes: 187,
+          },
+          {
+            user: USER_PROFILES[0],
+            text: "@ali_freelance Exactly. Every country needs national retraining programs. Coursera, LinkedIn Learning, and free AI bootcamps worldwide are the only lifeline.",
+            time: "45m ago",
+            likes: 234,
+          },
+        ],
+      },
+      {
+        user: USER_PROFILES[1],
+        text: "Military has the same challenge. Intelligence analysis that took teams of 20 can now be done by AI systems with 3 operators. We're retraining our signals corps but it's not fast enough.",
+        time: "3h ago",
+        likes: 567,
+        replies: [],
+      },
+      {
+        user: USER_PROFILES[6],
+        text: "I teach computer science at a university. 80% of our curriculum is outdated. We're teaching students skills that won't exist by the time they graduate. The entire education system needs emergency reform.",
+        time: "5h ago",
+        likes: 891,
+        replies: [
+          {
+            user: USER_PROFILES[4],
+            text: "Central banks worldwide are realizing traditional banking courses are obsolete. We're seeing fintech skills frameworks emerge in 15+ countries. Happy to share global patterns.",
+            time: "4h ago",
+            likes: 123,
+          },
+        ],
+      },
+    ],
+    poll: {
+      question: "When will AI replace most call center jobs globally?",
+      options: [
+        { text: "Already happening (2025)", votes: 3421 },
+        { text: "Within 2 years (2027)", votes: 5892 },
+        { text: "5+ years away (2030+)", votes: 2103 },
+        { text: "Won't happen — humans preferred", votes: 876 },
+      ],
+    },
+    time: "6h ago",
+    views: "48.2K",
+  },
+  {
+    id: "p2",
+    type: "ai_paradigm",
+    aiTitle: "OLD vs NEW: Banking is Dead. Long Live DeFi?",
+    oldWorld: {
+      title: "Conventional Banking",
+      points: [
+        "Central banks control money supply",
+        "2B+ people globally unbanked",
+        "Remittance fees 5-8% worldwide",
+        "KYC requirements vary by country",
+        "Interest rates hurt borrowers globally",
+      ],
+    },
+    newWorld: {
+      title: "Crypto & Mobile Finance",
+      points: [
+        "M-Pesa/GCash/UPI already serve 1B+ wallets",
+        "Blockchain remittances cut fees to 0.5%",
+        "DeFi lending without bank approval",
+        "CBDCs launching in 30+ countries",
+        "Stablecoins as inflation hedge",
+      ],
+    },
+    aiBody:
+      "The world sends/receives $800B+ in remittances annually. Traditional banks and money transfer operators eat $60B+ in fees. Blockchain could reduce that overnight. But here's the catch: regulation varies wildly, most central banks haven't approved crypto, and billions still trust cash. Who wins?",
+    reactions: { fire: 2341, insight: 1567, concern: 892, strength: 1203, think: 445 },
+    comments: [
+      {
+        user: USER_PROFILES[4],
+        text: "Working in banking for 12 years. The writing is on the wall. Our CEO just formed a 'Digital Transformation' committee — code for 'figure out how not to die.' Every bank knows mobile wallets are eating their lunch.",
+        time: "4h ago",
+        likes: 723,
+        replies: [
+          {
+            user: USER_PROFILES[7],
+            text: "In developing economies worldwide, mobile money is outpacing banks. WeChat Pay in China, M-Pesa in Kenya, GCash in Philippines, UPI in India. The bank branch model is dying globally.",
+            time: "3h ago",
+            likes: 445,
+          },
+        ],
+      },
+      {
+        user: USER_PROFILES[3],
+        text: "As a farmer, I can tell you — getting a bank loan takes 6 months and requires land as collateral. A DeFi protocol could approve me in minutes based on my crop yield history. The system is broken.",
+        time: "8h ago",
+        likes: 1102,
+        replies: [],
+      },
+    ],
+    poll: {
+      question: "What's the future of money worldwide?",
+      options: [
+        { text: "Banks will adapt and survive", votes: 2890 },
+        { text: "Mobile wallets will dominate", votes: 6734 },
+        { text: "Crypto will go mainstream", votes: 3201 },
+        { text: "Cash will remain king", votes: 1456 },
+      ],
+    },
+    time: "12h ago",
+    views: "71.5K",
+  },
+  {
+    id: "p3",
+    type: "ai_scenario",
+    aiTitle: "Water Crisis: 2 Billion People Face Severe Water Scarcity",
+    aiBody:
+      "Global water storage capacity is critically mismatched with need. South Asia stores 30 days, North America 120, Australia 900. Climate volatility is making this worse — not better. Floods in Pakistan (2022), droughts in Horn of Africa, unprecedented heat everywhere.\n\nAgriculture depends 70% on freshwater globally. We are facing a cascade of food crises. Dams in Pakistan, Egypt, and across Africa are silting up. Climate migration will displace 1B+ people by 2050 if we don't act now.",
+    aiVerdict: "critical",
+    category: "climate",
+    severity: "critical",
+    reactions: { fire: 3201, insight: 1234, concern: 4567, strength: 890, think: 2345 },
+    comments: [
+      {
+        user: USER_PROFILES[3],
+        text: "I lost everything in climate-related floods. My crops — years of savings — gone in hours. Now I've switched to drip irrigation and climate-resilient varieties. Uses 60% less water. Farmers worldwide need to learn this.",
+        time: "1d ago",
+        likes: 2341,
+        replies: [
+          {
+            user: USER_PROFILES[6],
+            text: "Would you share your expertise globally? Your practical water conservation techniques are invaluable. We can distribute worldwide through educational networks.",
+            time: "20h ago",
+            likes: 567,
+          },
+          {
+            user: USER_PROFILES[3],
+            text: "Absolutely! If my experience saves even one farmer globally from what I went through, it's worth it. Climate resilience is everyone's fight.",
+            time: "18h ago",
+            likes: 891,
+          },
+        ],
+      },
+      {
+        user: USER_PROFILES[1],
+        text: "Water is a global security issue. Governments everywhere nod and do nothing. Disaster response is too late. We need global coordination on water management NOW.",
+        time: "2d ago",
+        likes: 1567,
+        replies: [],
+      },
+    ],
+    time: "1d ago",
+    views: "124K",
+  },
+  {
+    id: "p4",
+    type: "ai_insight",
+    aiTitle: "🔮 Global Currency Markets: Dollar Hegemony Weakening",
+    aiBody:
+      "Based on collective signals from our global network: BRICS currency initiatives accelerating, central banks diversifying reserves away from USD, CBDCs rolling out in 50+ countries. The crowd's prediction accuracy on currency trends has been 78% over the last 6 months. Here's what sectors are saying worldwide:",
+    sectorSignals: [
+      { sector: "Banking", signal: "Cautiously optimistic", confidence: 72 },
+      { sector: "IT Exports", signal: "Bullish — USD inflows accelerating", confidence: 85 },
+      { sector: "Agriculture", signal: "Neutral — waiting for monsoon forecast", confidence: 50 },
+      { sector: "Real Estate", signal: "Bearish — regulatory crackdown continuing", confidence: 35 },
+    ],
+    reactions: { fire: 1234, insight: 2567, concern: 456, strength: 1890, think: 789 },
+    comments: [
+      {
+        user: USER_PROFILES[4],
+        text: "Our treasury desk sees de-dollarization accelerating. If tech exports cross $100B globally, emerging market currencies gain strength. Haven't seen this kind of shift in 20 years.",
+        time: "3h ago",
+        likes: 456,
+        replies: [],
+      },
+      {
+        user: USER_PROFILES[5],
+        text: "As someone who earns in USD on Upwork — stable currencies matter more than volatility for long-term planning. This truth applies everywhere, not just emerging markets.",
+        time: "5h ago",
+        likes: 234,
+        replies: [],
+      },
+    ],
+    time: "3h ago",
+    views: "35.8K",
+  },
+  {
+    id: "p5",
+    type: "community_wisdom",
+    user: USER_PROFILES[7],
+    title: "I moved to a developing megacity. Here's what nobody tells you.",
+    body: "Everyone romanticizes rapid development in emerging cities. Here's reality: infrastructure is patchwork, electricity/internet inconsistent, FDI zones are partially occupied. BUT — and this is huge — land prices tripled in 2 years. External powers are building THEIR OWN infrastructure, not local capacity. Displaced communities are everywhere. If you're investing, follow international corridor announcements. NOT traditional downtown areas.",
+    reactions: { fire: 2890, insight: 3456, concern: 1234, strength: 567, think: 890 },
+    comments: [
+      {
+        user: USER_PROFILES[1],
+        text: "Similar strategic infrastructure plays are unfolding across the Global South. Whoever controls key choke points controls global energy and commerce. This is the defining geopolitical story of 2026.",
+        time: "6h ago",
+        likes: 1234,
+        replies: [],
+      },
+    ],
+    time: "8h ago",
+    views: "89.3K",
+  },
+];
+
+// ── TRENDING TOPICS ──
+const TRENDING = [
+  { tag: "AIJobDisruption", posts: "12.4K", trend: "up" },
+  { tag: "ClimateAction2030", posts: "8.7K", trend: "up" },
+  { tag: "DeFiRevolution", posts: "23.1K", trend: "up" },
+  { tag: "RemoteWorkNation", posts: "6.2K", trend: "stable" },
+  { tag: "MindsetOverBorders", posts: "15.8K", trend: "up" },
+  { tag: "NewWorldAlliances", posts: "4.5K", trend: "up" },
+  { tag: "SolarEverywhere", posts: "9.1K", trend: "up" },
+  { tag: "DigitalNomad", posts: "3.2K", trend: "new" },
+];
+
+// ── PARADIGM SHIFTS ──
+const PARADIGMS = [
+  {
+    id: "money",
+    icon: Banknote,
+    iconNew: Binary,
+    old: "Conventional Banking",
+    new_: "Crypto & DeFi",
+    readiness: 25,
+    oldPoints: ["75% unbanked", "6-month loan approval", "5-8% remittance fees", "Physical branches"],
+    newPoints: ["Mobile wallets 80M+", "Instant DeFi lending", "0.5% blockchain transfers", "Phone = bank"],
+  },
+  {
+    id: "intel",
+    icon: Eye,
+    iconNew: Bot,
+    old: "Human Intelligence",
+    new_: "AI-Augmented Intel",
+    readiness: 40,
+    oldPoints: ["Manual surveillance", "Paper reports", "Months to analyze", "Limited scale"],
+    newPoints: ["Satellite AI analysis", "Real-time OSINT", "Predictive modeling", "Unlimited scale"],
+  },
+  {
+    id: "edu",
+    icon: BookOpen,
+    iconNew: Brain,
+    old: "Rote Learning",
+    new_: "AI-Personalized Education",
+    readiness: 30,
+    oldPoints: ["Memorize & repeat", "One-size-fits-all", "250M+ children out of school globally", "Degree worship"],
+    newPoints: ["AI tutors in local languages", "Personalized paths", "Learn from anywhere", "Skills > degrees"],
+  },
+  {
+    id: "energy",
+    icon: Flame,
+    iconNew: Waves,
+    old: "Fossil Fuel Dependency",
+    new_: "Solar & Distributed Energy",
+    readiness: 55,
+    oldPoints: [
+      "Global debt cycles from energy imports",
+      "Load shedding across developing world",
+      "Import dependent everywhere",
+      "State utility monopolies",
+    ],
+    newPoints: ["Vast global sunny regions", "2-3yr solar ROI everywhere", "Community microgrids rising", "Decentralized energy"],
+  },
+  {
+    id: "gov",
+    icon: Building2,
+    iconNew: Network,
+    old: "Paper Bureaucracy",
+    new_: "Digital Democracy",
+    readiness: 35,
+    oldPoints: ["British-era DC system", "Paper land records", "Corruption tax", "Months for permits"],
+    newPoints: ["Blockchain records", "AI tax compliance", "Digital identity", "Instant e-services"],
+  },
+  {
+    id: "work",
+    icon: Briefcase,
+    iconNew: Sparkles,
+    old: "9-to-5 Job Culture",
+    new_: "Global Gig Economy",
+    readiness: 50,
+    oldPoints: ["Govt job obsession", "Local market only", "Seniority > merit", "Physical office"],
+    newPoints: ["$800M+ freelance exports", "AI 10x productivity", "Global clients", "Work from anywhere"],
+  },
+];
+
+// ═══════════════════════════════════════════
+// WORLD MAP, ALLIANCES & QI SYSTEM
+// ═══════════════════════════════════════════
+
+// ── World clusters (for SVG map) ──
+const GEO_CLUSTERS = [
+  {
+    id: "na",
+    label: "North America",
+    x: 22,
+    y: 32,
+    pop: "380M",
+    color: "#3b82f6",
+    groups: ["Tech Titans", "Wall Street", "Military-Industrial"],
+    wealth: 42,
+    wealthTrend: "stable",
+    influence: 38,
+  },
+  {
+    id: "eu",
+    label: "Europe",
+    x: 48,
+    y: 28,
+    pop: "450M",
+    color: "#8b5cf6",
+    groups: ["Regulators", "Green Economy", "Old Money"],
+    wealth: 22,
+    wealthTrend: "down",
+    influence: 18,
+  },
+  {
+    id: "cn",
+    label: "China",
+    x: 74,
+    y: 35,
+    pop: "1.4B",
+    color: "#ef4444",
+    groups: ["State-Tech Fusion", "Belt & Road", "Manufacturing"],
+    wealth: 18,
+    wealthTrend: "up",
+    influence: 22,
+  },
+  {
+    id: "sa",
+    label: "South Asia",
+    x: 66,
+    y: 45,
+    pop: "2B",
+    color: "#10b981",
+    groups: ["Youth Explosion", "IT Services", "Agriculture"],
+    wealth: 4,
+    wealthTrend: "up",
+    influence: 6,
+  },
+  {
+    id: "me",
+    label: "Middle East",
+    x: 56,
+    y: 42,
+    pop: "400M",
+    color: "#f59e0b",
+    groups: ["Sovereign Wealth", "Energy Transition", "Vision 2030"],
+    wealth: 6,
+    wealthTrend: "shifting",
+    influence: 8,
+  },
+  {
+    id: "af",
+    label: "Africa",
+    x: 50,
+    y: 58,
+    pop: "1.4B",
+    color: "#ec4899",
+    groups: ["Mobile-First", "Resource Rich", "Youngest Population"],
+    wealth: 3,
+    wealthTrend: "up",
+    influence: 4,
+  },
+  {
+    id: "sea",
+    label: "SE Asia",
+    x: 78,
+    y: 52,
+    pop: "700M",
+    color: "#14b8a6",
+    groups: ["Digital Economy", "Manufacturing Hub", "ASEAN Rising"],
+    wealth: 4,
+    wealthTrend: "up",
+    influence: 3,
+  },
+  {
+    id: "sa2",
+    label: "Latin America",
+    x: 28,
+    y: 60,
+    pop: "650M",
+    color: "#f97316",
+    groups: ["Commodities", "Fintech Boom", "Climate Frontline"],
+    wealth: 3,
+    wealthTrend: "stable",
+    influence: 2,
+  },
+];
+
+// ── WEALTH FLOWS (subtle animated shifts) ──
+const WEALTH_FLOWS = [
+  { from: "eu", to: "cn", label: "Manufacturing", intensity: 0.6 },
+  { from: "na", to: "sa", label: "IT Outsourcing", intensity: 0.4 },
+  { from: "me", to: "sea", label: "Investment", intensity: 0.35 },
+  { from: "eu", to: "af", label: "Green Energy", intensity: 0.3 },
+  { from: "na", to: "me", label: "Defense", intensity: 0.5 },
+  { from: "cn", to: "af", label: "Belt & Road", intensity: 0.55 },
+  { from: "cn", to: "sa", label: "Infrastructure", intensity: 0.4 },
+];
+
+const MINDSET_CLUSTERS = [
+  {
+    id: "builders",
+    label: "The Builders",
+    emoji: "🔨",
+    color: "#10b981",
+    size: 45,
+    members: "~340M",
+    influence: 32,
+    influenceTrend: "rising",
+    desc: "People who CREATE things — code, products, businesses, content. They don't consume the future, they build it.",
+    beliefs: "Action > words. Ship fast. Learn by doing. The world rewards makers, not talkers.",
+    who: "Developers, entrepreneurs, creators, makers, inventors across ALL countries",
+    winning: true,
+  },
+  {
+    id: "seekers",
+    label: "The Seekers",
+    emoji: "🔭",
+    color: "#3b82f6",
+    size: 38,
+    members: "~280M",
+    influence: 24,
+    influenceTrend: "rising",
+    desc: "Lifelong learners obsessed with understanding how things work. Driven by curiosity, not credentials.",
+    beliefs: "Knowledge compounds. Question everything. Degrees < skills. Cross-disciplinary thinking wins.",
+    who: "Scientists, researchers, autodidacts, curious minds in every field",
+    winning: true,
+  },
+  {
+    id: "connectors",
+    label: "The Connectors",
+    emoji: "🌐",
+    color: "#8b5cf6",
+    size: 35,
+    members: "~220M",
+    influence: 18,
+    influenceTrend: "rising",
+    desc: "People who link ideas, people, and resources across borders. They see relationships others miss.",
+    beliefs: "Your network IS your net worth. Collaboration > competition. Bridge cultures, don't build walls.",
+    who: "Diplomats, community builders, marketplace creators, translators of ideas",
+    winning: true,
+  },
+  {
+    id: "guardians",
+    label: "The Guardians",
+    emoji: "🛡️",
+    color: "#f59e0b",
+    size: 30,
+    members: "~400M",
+    influence: 14,
+    influenceTrend: "stable",
+    desc: "Protectors of systems — security, health, environment, justice. Without them, builders have no foundation.",
+    beliefs: "Stability enables progress. Protect the vulnerable. Long-term thinking > short-term gain.",
+    who: "Doctors, soldiers, climate scientists, judges, teachers, caregivers",
+    winning: true,
+  },
+  {
+    id: "dreamers",
+    label: "The Dreamers",
+    emoji: "✨",
+    color: "#ec4899",
+    size: 25,
+    members: "~150M",
+    influence: 8,
+    influenceTrend: "rising",
+    desc: "Visionaries who imagine what doesn't exist yet. Artists, philosophers, and those who dare to think differently.",
+    beliefs: "Imagination precedes reality. Art and beauty matter. Dream big, start small.",
+    who: "Artists, writers, philosophers, visionary entrepreneurs",
+    winning: true,
+  },
+  {
+    id: "anchored",
+    label: "The Anchored",
+    emoji: "⚓",
+    color: "#6b7280",
+    size: 55,
+    members: "~3B+",
+    influence: 4,
+    influenceTrend: "falling",
+    desc: "People locked into old-world systems — geography, caste, tradition, bureaucracy. Not by choice, but by circumstance.",
+    beliefs: "Varies — many want change but are trapped by systems designed to keep them in place.",
+    who: "Most of humanity — farmers, factory workers, govt employees, traditional workers",
+    winning: false,
+  },
+];
+
+// ── New World Alliances (user-joinable) ──
+const SEED_ALLIANCES = [
+  {
+    id: "a1",
+    name: "Builders Without Borders",
+    emoji: "🌍🔨",
+    founder: { name: "Aisha Malik", avatar: "👩‍💻", handle: "@aisha_dev" },
+    members: 12847,
+    founded: "3 months ago",
+    worldVision:
+      "A world where a brilliant kid anywhere has the same tools, access, and opportunity as one in Silicon Valley. Geography should not determine destiny.",
+    commitments: [
+      "Build one thing every month",
+      "Teach one skill to someone who can't afford it",
+      "Share your failures publicly — normalize learning",
+      "Help one person outside your country every quarter",
+    ],
+    philosophy:
+      "We believe the next billion-dollar company will come from someone who currently has no internet. Our job is to make sure they get the tools.",
+    discussion: [
+      {
+        user: { name: "Ali Hassan", avatar: "🧑‍💻" },
+        text: "Just shipped a free multilingual coding course for rural regions. 2,000 signups in first week. This alliance is why I built it.",
+        time: "2h ago",
+        likes: 345,
+      },
+      {
+        user: { name: "Nia Okafor", avatar: "👷" },
+        text: "From the Global South — we have talent everywhere but mentorship is scarce. Can this alliance create a global mentorship network?",
+        time: "5h ago",
+        likes: 234,
+      },
+    ],
+    tags: ["tech", "education", "equality", "global"],
+    mindsets: ["builders", "seekers"],
+  },
+  {
+    id: "a2",
+    name: "The 2050 Parents",
+    emoji: "👶🌱",
+    founder: { name: "Dr. Fatima Noor", avatar: "👩‍⚕️", handle: "@dr_fatima" },
+    members: 34521,
+    founded: "6 months ago",
+    worldVision:
+      "We're raising the generation that will live to 2100. They'll face climate collapse, AI disruption, and a completely different world. Are we preparing them — or preparing them for OUR world that won't exist?",
+    commitments: [
+      "Teach your children critical thinking, not obedience",
+      "Expose them to multiple worldviews, not just yours",
+      "Let them fail safely now so they're resilient later",
+      "1 hour/week learning alongside your child, not just sending them to school",
+    ],
+    philosophy:
+      "Every parenting decision is a bet on the future. Most parents are betting on 1990. We're betting on 2050. Our children don't need our answers — they need our questions.",
+    discussion: [
+      {
+        user: { name: "Prof. Zainab", avatar: "👩‍🏫" },
+        text: "The hardest part isn't teaching kids new things. It's UN-teaching ourselves the old things we pass on unconsciously — obey authority, get a govt job, don't question elders.",
+        time: "1d ago",
+        likes: 892,
+      },
+      {
+        user: { name: "Sara Ahmed", avatar: "👩‍💼" },
+        text: "My 8-year-old just used ChatGPT to write a story about a girl who solves water crisis in Sindh. She didn't learn this in school. She learned it because I let her be curious.",
+        time: "8h ago",
+        likes: 567,
+      },
+    ],
+    tags: ["parenting", "future", "education", "mindset"],
+    mindsets: ["guardians", "dreamers"],
+  },
+  {
+    id: "a3",
+    name: "Global Solar Army",
+    emoji: "☀️⚡",
+    founder: { name: "Eng. Rashid Kamal", avatar: "👷", handle: "@solar_rashid" },
+    members: 8932,
+    founded: "2 months ago",
+    worldVision:
+      "150+ countries have 300+ sunny days. Every home should generate its own power. We don't need centralized grids. We need solar panels and the will to install them.",
+    commitments: [
+      "Install solar on your own home within 6 months",
+      "Help 3 neighbors understand solar economics",
+      "Document your installation journey for others",
+      "Advocate for net-metering policy in your district",
+    ],
+    philosophy:
+      "Energy independence isn't a government program. It's a people's movement. Every rooftop panel is an act of freedom from circular debt, from load shedding, from dependence.",
+    discussion: [
+      {
+        user: { name: "Muhammad Iqbal", avatar: "👨‍🌾" },
+        text: "Installed 5KW system on my farm. Electricity bills eliminated. Paid back investment in 2 years. Solar should be universal in sunny regions.",
+        time: "3h ago",
+        likes: 1234,
+      },
+    ],
+    tags: ["energy", "climate", "independence", "solar"],
+    mindsets: ["builders", "guardians"],
+  },
+  {
+    id: "a4",
+    name: "Faith & Tech Alliance",
+    emoji: "🕌💻",
+    founder: { name: "Maulana Tech", avatar: "🧕", handle: "@faith_tech" },
+    members: 21453,
+    founded: "4 months ago",
+    worldVision:
+      "All faith traditions emphasize knowledge and wisdom. This alliance bridges faith communities globally with cutting-edge technology. Ethical innovation for all.",
+    commitments: [
+      "Learn one new digital skill every month",
+      "Build tech that serves faith communities — health, education, finance",
+      "Create ethically-compliant fintech alternatives",
+      "Bridge the traditional-modern education divide through shared learning",
+    ],
+    philosophy:
+      "Our ancestors built the House of Wisdom in Baghdad that preserved and advanced all human knowledge. We can build the digital version. Technology is not haram — ignorance is.",
+    discussion: [
+      {
+        user: { name: "Hafiz Abdullah", avatar: "🧑‍🎓" },
+        text: "Built an AI Quran tutor that helps children learn tajweed through voice recognition. 50,000 users in 3 countries. This is what happens when faith meets technology.",
+        time: "6h ago",
+        likes: 2341,
+      },
+    ],
+    tags: ["faith", "technology", "knowledge", "fintech"],
+    mindsets: ["seekers", "builders"],
+  },
+];
+
+// ── DAILY ROUTINE SCORING ──
+const ROUTINE_QUESTIONS = [
+  {
+    id: "wake",
+    q: "What time do you usually wake up?",
+    options: [
+      { text: "Before 5 AM", qi: 15, tag: "Discipline is the foundation of Qi" },
+      { text: "5-7 AM", qi: 12, tag: "Solid — most high performers here" },
+      { text: "7-9 AM", qi: 8, tag: "Average — you're leaving energy on the table" },
+      { text: "After 9 AM", qi: 3, tag: "The world has already moved by the time you start" },
+    ],
+  },
+  {
+    id: "learn",
+    q: "How much time do you spend learning NEW skills daily?",
+    options: [
+      { text: "2+ hours", qi: 20, tag: "You're building compound knowledge interest" },
+      { text: "30 min - 2 hours", qi: 14, tag: "Good — consistency will compound" },
+      { text: "Occasionally", qi: 6, tag: "Not enough in a world changing this fast" },
+      { text: "None — I use existing skills", qi: 0, tag: "🚨 DANGER: Your skills are depreciating daily" },
+    ],
+  },
+  {
+    id: "screen",
+    q: "What do you mostly do on your phone?",
+    options: [
+      { text: "Learn, build, create, earn", qi: 18, tag: "Phone is a tool — you're using it right" },
+      { text: "Mix of productive + entertainment", qi: 10, tag: "Cut the entertainment by 50% — watch what happens" },
+      { text: "Social media scrolling", qi: 3, tag: "You're making others rich with your attention" },
+      { text: "Mostly entertainment/gaming", qi: 0, tag: "Every hour scrolling = 1 Qi burned for someone else's profit" },
+    ],
+  },
+  {
+    id: "income",
+    q: "How many income streams do you have?",
+    options: [
+      { text: "3+ streams", qi: 20, tag: "Antifragile. You'll survive any disruption." },
+      { text: "2 streams", qi: 14, tag: "Good diversification. Build one more." },
+      { text: "1 salary/job", qi: 6, tag: "Single point of failure. One layoff away from crisis." },
+      { text: "No reliable income", qi: 0, tag: "Urgent: Build ANY income stream this week" },
+    ],
+  },
+  {
+    id: "digital",
+    q: "Can you earn money from the internet right now?",
+    options: [
+      { text: "Yes — actively earning online", qi: 18, tag: "You're connected to the global economy. Huge advantage." },
+      { text: "I have the skills but haven't started", qi: 10, tag: "Potential energy → Convert to kinetic. Start TODAY." },
+      { text: "I'm learning how", qi: 6, tag: "On the right path. Accelerate." },
+      { text: "No — don't know how", qi: 0, tag: "In 2026, this is like not knowing how to read in 1926" },
+    ],
+  },
+  {
+    id: "network",
+    q: "How often do you connect with people outside your city/country?",
+    options: [
+      { text: "Daily — global network", qi: 16, tag: "Your network IS your net worth in the new world" },
+      { text: "Weekly", qi: 10, tag: "Decent. Increase touchpoints." },
+      { text: "Rarely", qi: 4, tag: "You're limited to local opportunities" },
+      { text: "Never — only local contacts", qi: 0, tag: "The biggest opportunities are OUTSIDE your zip code" },
+    ],
+  },
+  {
+    id: "health",
+    q: "Do you exercise or take care of your health?",
+    options: [
+      { text: "Daily exercise + good diet", qi: 14, tag: "High energy = high output. You get it." },
+      { text: "Some exercise, okay diet", qi: 8, tag: "Upgrade this — body is your primary asset" },
+      { text: "Rarely", qi: 3, tag: "Low energy = low Qi. Fix this first." },
+      { text: "No — health is poor", qi: 0, tag: "Nothing else matters if health fails. Priority #1." },
+    ],
+  },
+  {
+    id: "ai_usage",
+    q: "How do you use AI tools (ChatGPT, etc.)?",
+    options: [
+      { text: "Daily power user — it's my co-pilot", qi: 20, tag: "You're already living in the new world. Maximum Qi." },
+      { text: "Use it sometimes for work/learning", qi: 12, tag: "Good start. Go deeper — make it your daily partner." },
+      { text: "Tried it a few times", qi: 5, tag: "You're falling behind. AI users are 10x faster than you." },
+      { text: "Never used / don't know what it is", qi: 0, tag: "🚨 CRITICAL: Start today or be left in the old world permanently" },
+    ],
+  },
+];
+
+// ── REGIONS ──
+const REGIONS = [
+  "North America",
+  "Europe",
+  "South Asia",
+  "East Asia",
+  "Middle East",
+  "Africa",
+  "SE Asia",
+  "Latin America",
+];
+const SECTORS = [
+  "Technology/IT",
+  "Agriculture",
+  "Healthcare",
+  "Education",
+  "Finance/Banking",
+  "Manufacturing",
+  "Military/Defense",
+  "Government",
+  "Legal",
+  "Media",
+  "Real Estate",
+  "Retail",
+  "Logistics",
+  "Energy",
+  "Freelancing",
+  "Student",
+  "Unemployed",
+];
+const CHALLENGES = [
+  "Low Income",
+  "Unemployment",
+  "Skill Gap",
+  "No Education Access",
+  "No Healthcare",
+  "Digital Literacy Gap",
+  "Water Crisis",
+  "Food Insecurity",
+  "Housing Crisis",
+  "Heavy Debt",
+  "No Business Capital",
+  "Security Fears",
+  "Climate Damage",
+];
+
+// ── ISOLATED CLOCK ──
+const LiveClock = ({ className }) => {
+  const [t, setT] = useState(new Date());
+  useEffect(() => {
+    const i = setInterval(() => setT(new Date()), 60000);
+    return () => clearInterval(i);
+  }, []);
+  return (
+    <span className={className}>
+      {t.toLocaleDateString("en-PK", { weekday: "short", month: "short", day: "numeric" })}
+    </span>
+  );
+};
+
+// ── BADGE ──
+const Badge = ({ text, color = "green" }) => {
+  const c = {
+    green: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
+    blue: "bg-blue-500/15 text-blue-400 border-blue-500/20",
+    red: "bg-red-500/15 text-red-400 border-red-500/20",
+    yellow: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20",
+    purple: "bg-purple-500/15 text-purple-400 border-purple-500/20",
+    gray: "bg-gray-500/15 text-gray-400 border-gray-500/20",
+  };
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs border ${c[color] || c.green}`}>
+      {text}
+    </span>
+  );
+};
+
+// ═══════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════
+export default function MindShift360() {
+  const [tab, setTab] = useState("feed");
+  const [profile, setProfile] = useState(null);
+  const [showOnboard, setShowOnboard] = useState(false);
+  const [expandedPost, setExpandedPost] = useState(null);
+  const [commentInputs, setCommentInputs] = useState({});
+  const [userReactions, setUserReactions] = useState({});
+  const [userVotes, setUserVotes] = useState({});
+  const [expandedParadigm, setExpandedParadigm] = useState(null);
+  const [newPostText, setNewPostText] = useState("");
+  const [communityPosts, setCommunityPosts] = useState([]);
+  const [bookmarks, setBookmarks] = useState(new Set());
+  const [userComments, setUserComments] = useState({});
+  const [form, setForm] = useState({
+    name: "",
+    age: 25,
+    province: "North America",
+    sector: "Technology/IT",
+    education: "bachelors",
+    income: "50k_100k",
+    type: "civilian",
+    challenges: [],
+  });
+
+  // Network stats that grow
+  const [networkStats, setNetworkStats] = useState({
+    minds: 847293,
+    interactions: 2847291,
+    accuracy: 78.2,
+  });
+
+  const toggleReaction = useCallback((postId, key) => {
+    setUserReactions((prev) => {
+      const postReactions = prev[postId] || {};
+      return { ...prev, [postId]: { ...postReactions, [key]: !postReactions[key] } };
+    });
+    setNetworkStats((s) => ({
+      ...s,
+      interactions: s.interactions + 1,
+      accuracy: Math.min(99, s.accuracy + 0.001),
+    }));
+  }, []);
+
+  const castVote = useCallback(
+    (postId, optionIdx) => {
+      if (userVotes[postId] !== undefined) return;
+      setUserVotes((prev) => ({ ...prev, [postId]: optionIdx }));
+      setNetworkStats((s) => ({ ...s, interactions: s.interactions + 1 }));
+    },
+    [userVotes],
+  );
+
+  const toggleBookmark = useCallback((postId) => {
+    setBookmarks((prev) => {
+      const n = new Set(prev);
+      n.has(postId) ? n.delete(postId) : n.add(postId);
+      return n;
+    });
+  }, []);
+
+  const addComment = useCallback(
+    (postId) => {
+      const text = commentInputs[postId]?.trim();
+      if (!text || !profile) return;
+      setUserComments((prev) => ({
+        ...prev,
+        [postId]: [
+          ...(prev[postId] || []),
+          {
+            user: {
+              name: profile.name,
+              handle: `@${profile.name.toLowerCase().replace(/\s/g, "_")}`,
+              avatar: AVATARS[profile.name.length % AVATARS.length],
+              badge: profile.sector?.split("/")[0],
+              verified: false,
+            },
+            text,
+            time: "just now",
+            likes: 0,
+            replies: [],
+          },
+        ],
+      }));
+      setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
+      setNetworkStats((s) => ({
+        ...s,
+        interactions: s.interactions + 1,
+        accuracy: Math.min(99, s.accuracy + 0.005),
+      }));
+    },
+    [commentInputs, profile],
+  );
+
+  const submitCommunityPost = useCallback(() => {
+    if (!newPostText.trim() || !profile) return;
+    setCommunityPosts((prev) => [
+      {
+        id: `user_${Date.now()}`,
+        type: "community_wisdom",
+        user: {
+          name: profile.name,
+          handle: `@${profile.name.toLowerCase().replace(/\s/g, "_")}`,
+          avatar: AVATARS[profile.name.length % AVATARS.length],
+          badge: profile.sector?.split("/")[0],
+          verified: false,
+        },
+        title: "",
+        body: newPostText,
+        reactions: { fire: 0, insight: 0, concern: 0, strength: 0, think: 0 },
+        comments: [],
+        time: "just now",
+        views: "0",
+      },
+      ...prev,
+    ]);
+    setNewPostText("");
+  }, [newPostText, profile]);
+
+  const handleOnboard = useCallback(() => {
+    setProfile(form);
+    setShowOnboard(false);
+    setNetworkStats((s) => ({ ...s, minds: s.minds + 1 }));
+  }, [form]);
+
+  // Advisory
+  const advisory = useMemo(() => {
+    if (!profile) return null;
+    const s = { economic: 50, digital: 50, climate: 50, career: 50, financial: 50 };
+    const recs = [];
+    const risks = [];
+    const opps = [];
+
+    if (["Technology/IT", "Freelancing"].includes(profile.sector)) {
+      s.digital += 25;
+      s.career += 15;
+      opps.push("AI/ML specialization → 3-5x earnings potential");
+      opps.push("Single developer + AI tools = 5-person team output");
+    } else if (profile.sector === "Agriculture") {
+      s.climate -= 20;
+      risks.push("Climate change = existential threat to your livelihood");
+      recs.push("Switch to drip irrigation + climate-resilient crops NOW");
+      opps.push("Organic export market pays 3-5x premium");
+    } else if (profile.sector?.includes("Military")) {
+      s.career += 15;
+      recs.push("Cyber warfare + AI = the future. Get technical training.");
+      opps.push("Security consulting market growing 25%/yr post-retirement");
+    } else if (profile.sector?.includes("Health")) {
+      s.career += 20;
+      opps.push("Telemedicine → serve 10,000 patients with AI-assisted diagnosis");
+    } else if (profile.sector?.includes("Finance")) {
+      s.financial += 15;
+      opps.push("Fintech is eating traditional banking — position yourself at the intersection");
+    } else if (profile.sector?.includes("Education")) {
+      risks.push("Traditional teaching is dying. Digital or die.");
+      opps.push("EdTech content in local languages = 1B+ untapped learner market globally");
+    }
+
+    if (profile.income === "below_25k") {
+      s.financial -= 25;
+      recs.push("Coursera: free courses. Upwork: build global income. Accelerators worldwide: get funding. Start today.");
+    }
+    if (profile.age < 25) {
+      opps.push("You ARE Global ");
+      s.career += 10;
+    }
+    (profile.challenges || []).forEach((c) => {
+      if (c.includes("Digital")) recs.push("Coursera/Udemy — free/cheap, global, comprehensive");
+      if (c.includes("Unemploy")) recs.push("Fiverr + Upwork. Global freelancers earn $200B+/year. Join them.");
+      if (c.includes("Debt")) recs.push("Pay high-interest debt first (credit cards). Explore central bank restructuring options.");
+    });
+    const overall = Math.round(Object.values(s).reduce((a, b) => a + b) / 5);
+    return {
+      scores: Object.fromEntries(Object.entries(s).map(([k, v]) => [k, Math.max(0, Math.min(100, v))])),
+      recs: recs.slice(0, 5),
+      risks: risks.slice(0, 3),
+      opps: opps.slice(0, 4),
+      overall: Math.max(10, Math.min(100, overall)),
+    };
+  }, [profile]);
+
+  // ── COMPONENTS ──
+
+  const UserAvatar = ({ user, size = "md" }) => {
+    const s =
+      size === "sm"
+        ? "w-8 h-8 text-sm"
+        : size === "lg"
+          ? "w-12 h-12 text-xl"
+          : "w-10 h-10 text-base";
+    return (
+      <div className={`${s} rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 relative`}>
+        <span>{user.avatar}</span>
+        {user.verified && (
+          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+            <CheckCircle2 size={10} className="text-white" />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ReactionBar = ({ postId, reactions }) => (
+    <div className="flex items-center gap-1 flex-wrap">
+      {REACTIONS.map((r) => {
+        const isActive = userReactions[postId]?.[r.key];
+        const count = reactions[r.key] + (isActive ? 1 : 0);
+        return (
+          <button
+            key={r.key}
+            onClick={() => toggleReaction(postId, r.key)}
+            className={`reaction-btn flex items-center gap-1 text-xs border border-transparent ${isActive ? "active border-emerald-500/20" : "hover:bg-gray-800"}`}
+            title={r.label}
+          >
+            <span>{r.emoji}</span>
+            <span className={isActive ? "text-emerald-400 font-medium" : "text-gray-500"}>
+              {count > 0 ? count.toLocaleString() : ""}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const PollWidget = ({ postId, poll }) => {
+    const voted = userVotes[postId] !== undefined;
+    const totalVotes = poll.options.reduce((a, o) => a + o.votes, 0) + (voted ? 1 : 0);
+    return (
+      <div className="mt-3 p-4 rounded-xl bg-gray-900/50 border border-gray-800">
+        <p className="text-white text-sm font-medium mb-3 flex items-center gap-2">
+          <BarChart3 size={14} className="text-emerald-400" /> {poll.question}
+        </p>
+        <div className="space-y-2">
+          {poll.options.map((opt, i) => {
+            const votes = opt.votes + (userVotes[postId] === i ? 1 : 0);
+            const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+            const isMyVote = userVotes[postId] === i;
+            return (
+              <button
+                key={i}
+                onClick={() => castVote(postId, i)}
+                disabled={voted}
+                className={`w-full text-left rounded-xl p-3 transition-all relative overflow-hidden ${voted ? "" : "hover:bg-gray-800 cursor-pointer"} ${isMyVote ? "ring-1 ring-emerald-500/40" : ""}`}
+                style={{ background: voted ? "rgba(17,24,39,0.8)" : "rgba(31,41,55,0.5)" }}
+              >
+                {voted && (
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-xl transition-all duration-700"
+                    style={{
+                      width: `${pct}%`,
+                      background: isMyVote ? "rgba(16,185,129,0.12)" : "rgba(55,65,81,0.3)",
+                    }}
+                  />
+                )}
+                <div className="relative flex items-center justify-between">
+                  <span className={`text-sm ${isMyVote ? "text-emerald-400 font-medium" : "text-gray-300"}`}>
+                    {isMyVote && <CheckCircle2 size={12} className="inline mr-1.5" />}
+                    {opt.text}
+                  </span>
+                  {voted && (
+                    <span className={`text-sm font-mono ${isMyVote ? "text-emerald-400" : "text-gray-500"}`}>
+                      {pct}%
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-gray-600 text-xs mt-2">{totalVotes.toLocaleString()} votes</p>
+      </div>
+    );
+  };
+
+  const CommentSection = ({ postId, comments }) => {
+    const extraComments = userComments[postId] || [];
+    const allComments = [...comments, ...extraComments];
+    const isExpanded = expandedPost === postId;
+    const shown = isExpanded ? allComments : allComments.slice(0, 2);
+
+    return (
+      <div className="mt-3 border-t border-gray-800/50 pt-3">
+        {shown.map((c, i) => (
+          <div key={i} className="mb-3 slide-up" style={{ animationDelay: `${i * 0.05}s` }}>
+            <div className="flex gap-3">
+              <UserAvatar user={c.user} size="sm" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-white text-sm font-medium">{c.user.name}</span>
+                  <span className="text-gray-600 text-xs">{c.user.handle}</span>
+                  {c.user.badge && <Badge text={c.user.badge} color="gray" />}
+                  <span className="text-gray-700 text-xs">{c.time}</span>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed">{c.text}</p>
+                <div className="flex items-center gap-4 mt-1.5">
+                  <button className="text-gray-600 text-xs hover:text-emerald-400 transition-colors flex items-center gap-1">
+                    <ThumbsUp size={11} /> {c.likes || ""}
+                  </button>
+                  <button className="text-gray-600 text-xs hover:text-blue-400 transition-colors flex items-center gap-1">
+                    <MessageCircle size={11} /> Reply
+                  </button>
+                </div>
+                {/* Replies */}
+                {c.replies?.length > 0 && (
+                  <div className="mt-2 ml-2 pl-3 border-l border-gray-800 space-y-2">
+                    {c.replies.map((r, j) => (
+                      <div key={j} className="flex gap-2">
+                        <UserAvatar user={r.user} size="sm" />
+                        <div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-white text-xs font-medium">{r.user.name}</span>
+                            <span className="text-gray-700 text-xs">{r.time}</span>
+                          </div>
+                          <p className="text-gray-400 text-xs leading-relaxed">{r.text}</p>
+                          <button className="text-gray-600 text-xs hover:text-emerald-400 transition-colors mt-1 flex items-center gap-1">
+                            <ThumbsUp size={10} /> {r.likes || ""}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+        {allComments.length > 2 && !isExpanded && (
+          <button
+            onClick={() => setExpandedPost(postId)}
+            className="text-emerald-400 text-xs hover:text-emerald-300 transition-colors mb-2"
+          >
+            View all {allComments.length} comments
+          </button>
+        )}
+        {isExpanded && allComments.length > 2 && (
+          <button
+            onClick={() => setExpandedPost(null)}
+            className="text-gray-500 text-xs hover:text-gray-300 transition-colors mb-2"
+          >
+            Collapse
+          </button>
+        )}
+        {/* Comment Input */}
+        <div className="flex gap-2 mt-2">
+          <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 text-sm">
+            {profile ? AVATARS[(profile.name?.length || 0) % AVATARS.length] : "👤"}
+          </div>
+          <div className="flex-1 flex gap-2">
+            <input
+              value={commentInputs[postId] || ""}
+              onChange={(e) => setCommentInputs((p) => ({ ...p, [postId]: e.target.value }))}
+              onKeyDown={(e) => e.key === "Enter" && addComment(postId)}
+              placeholder={profile ? "Share your experience..." : "Join to comment..."}
+              disabled={!profile}
+              className="comment-input flex-1 bg-gray-900/50 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30 disabled:opacity-40"
+            />
+            <button
+              onClick={() => addComment(postId)}
+              disabled={!profile || !commentInputs[postId]?.trim()}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-800 disabled:text-gray-600 text-white rounded-xl transition-all text-sm"
+            >
+              <Send size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ── FEED CARD ──
+  const FeedCard = ({ post }) => {
+    const isAI = post.type !== "community_wisdom";
+    return (
+      <div className="card feed-card p-5 mb-4 fade-in">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            {isAI ? (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-600 to-blue-600 flex items-center justify-center flex-shrink-0">
+                <Bot size={18} className="text-white" />
+              </div>
+            ) : (
+              <UserAvatar user={post.user} />
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium text-sm">{isAI ? "MindShift AI" : post.user.name}</span>
+                {isAI && (
+                  <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <CheckCircle2 size={10} className="text-white" />
+                  </div>
+                )}
+                {!isAI && post.user.badge && <Badge text={post.user.badge} color="gray" />}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                {isAI && <span className="text-emerald-400">AI Analysis</span>}
+                {!isAI && <span>{post.user.handle}</span>}
+                <span>·</span>
+                <span>{post.time}</span>
+                {post.views && (
+                  <>
+                    <span>·</span>
+                    <Eye size={10} className="inline" /> <span>{post.views} views</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => toggleBookmark(post.id)}
+              className={`p-2 rounded-lg transition-all ${bookmarks.has(post.id) ? "text-yellow-400" : "text-gray-600 hover:text-gray-400"}`}
+            >
+              <Bookmark size={16} fill={bookmarks.has(post.id) ? "currentColor" : "none"} />
+            </button>
+            <button className="p-2 rounded-lg text-gray-600 hover:text-gray-400 transition-all">
+              <Share2 size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* AI Verdict Badge */}
+        {post.aiVerdict && (
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium mb-3 ${post.aiVerdict === "critical" ? "bg-red-500/10 text-red-400 border border-red-500/20" : post.aiVerdict === "likely" ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"}`}
+          >
+            {post.aiVerdict === "critical" ? (
+              <AlertTriangle size={12} />
+            ) : post.aiVerdict === "likely" ? (
+              <TrendingUp size={12} />
+            ) : (
+              <CheckCircle2 size={12} />
+            )}
+            AI Assessment:{" "}
+            {post.aiVerdict === "critical" ? "CRITICAL" : post.aiVerdict === "likely" ? "HIGHLY LIKELY" : "POSITIVE"}
+          </div>
+        )}
+
+        {/* Title */}
+        <h2 className="text-white text-lg font-bold mb-2 leading-snug">{post.aiTitle || post.title}</h2>
+
+        {/* Body */}
+        <p className="text-gray-300 text-sm leading-relaxed mb-3 whitespace-pre-line">{post.aiBody || post.body}</p>
+
+        {/* Paradigm Old vs New */}
+        {post.type === "ai_paradigm" && (
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="rounded-xl p-4 bg-red-950/15 border border-red-900/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Lock size={12} className="text-red-400" />
+                <span className="text-red-400 text-xs font-bold uppercase">Old World</span>
+              </div>
+              <h4 className="text-white text-sm font-medium mb-2">{post.oldWorld.title}</h4>
+              {post.oldWorld.points.map((p, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                  <XCircle size={10} className="text-red-400/50 flex-shrink-0" />
+                  {p}
+                </div>
+              ))}
+            </div>
+            <div className="rounded-xl p-4 bg-emerald-950/15 border border-emerald-900/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Unlock size={12} className="text-emerald-400" />
+                <span className="text-emerald-400 text-xs font-bold uppercase">New World</span>
+              </div>
+              <h4 className="text-white text-sm font-medium mb-2">{post.newWorld.title}</h4>
+              {post.newWorld.points.map((p, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-emerald-400/70 mb-1">
+                  <Zap size={10} className="text-emerald-400 flex-shrink-0" />
+                  {p}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sector Signals */}
+        {post.sectorSignals && (
+          <div className="mb-3 space-y-2">
+            {post.sectorSignals.map((s, i) => (
+              <div key={i} className="flex items-center gap-3 bg-gray-900/30 rounded-lg p-2.5">
+                <span className="text-gray-400 text-xs w-20">{s.sector}</span>
+                <div className="flex-1 h-1.5 bg-gray-800 rounded-full">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${s.confidence}%`,
+                      background: s.confidence > 60 ? "#10b981" : s.confidence > 40 ? "#f59e0b" : "#ef4444",
+                    }}
+                  />
+                </div>
+                <span className="text-gray-300 text-xs w-40 text-right">{s.signal}</span>
+                <span
+                  className="text-xs font-mono w-10 text-right"
+                  style={{
+                    color: s.confidence > 60 ? "#10b981" : s.confidence > 40 ? "#f59e0b" : "#ef4444",
+                  }}
+                >
+                  {s.confidence}%
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Poll */}
+        {post.poll && <PollWidget postId={post.id} poll={post.poll} />}
+
+        {/* Reactions */}
+        <div className="mt-3 flex items-center justify-between">
+          <ReactionBar postId={post.id} reactions={post.reactions} />
+          <button
+            onClick={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
+            className="text-gray-500 text-xs hover:text-gray-300 transition-colors flex items-center gap-1"
+          >
+            <MessageCircle size={13} /> {post.comments.length + (userComments[post.id]?.length || 0)}
+          </button>
+        </div>
+
+        {/* Comments */}
+        <CommentSection postId={post.id} comments={post.comments} />
+      </div>
+    );
+  };
+
+  // ── PAGES ──
+
+  const FeedPage = () => {
+    const allPosts = [...communityPosts, ...FEED_POSTS];
+    return (
+      <div>
+        {/* Compose */}
+        {profile && (
+          <div className="card p-4 mb-4">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-lg">
+                {AVATARS[(profile.name?.length || 0) % AVATARS.length]}
+              </div>
+              <div className="flex-1">
+                <textarea
+                  value={newPostText}
+                  onChange={(e) => setNewPostText(e.target.value)}
+                  placeholder="Share your insight, experience, or question with the world..."
+                  className="w-full bg-transparent text-white placeholder-gray-600 text-sm resize-none focus:outline-none min-h-[60px]"
+                  rows={2}
+                />
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-800/50">
+                  <div className="flex gap-2">
+                    <button className="text-gray-600 hover:text-emerald-400 transition-colors p-1.5 rounded-lg hover:bg-gray-800">
+                      <Image size={16} />
+                    </button>
+                    <button className="text-gray-600 hover:text-emerald-400 transition-colors p-1.5 rounded-lg hover:bg-gray-800">
+                      <BarChart3 size={16} />
+                    </button>
+                    <button className="text-gray-600 hover:text-emerald-400 transition-colors p-1.5 rounded-lg hover:bg-gray-800">
+                      <MapPin size={16} />
+                    </button>
+                  </div>
+                  <button
+                    onClick={submitCommunityPost}
+                    disabled={!newPostText.trim()}
+                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-sm font-medium rounded-xl transition-all"
+                  >
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!profile && (
+          <div className="card p-5 mb-4 text-center">
+            <p className="text-gray-400 text-sm mb-3">
+              Join {networkStats.minds.toLocaleString()} minds worldwide shaping the future together
+            </p>
+            <button
+              onClick={() => setShowOnboard(true)}
+              className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl text-sm hover:from-emerald-500 hover:to-blue-500 transition-all"
+            >
+              <Fingerprint size={14} className="inline mr-2" />
+              Join the Conversation
+            </button>
+          </div>
+        )}
+
+        {allPosts.map((post) => (
+          <FeedCard key={post.id} post={post} />
+        ))}
+      </div>
+    );
+  };
+
+  const ParadigmPage = () => (
+    <div>
+      <div className="card p-5 mb-4">
+        <h2 className="text-white text-lg font-bold mb-1">The Great Paradigm Shift</h2>
+        <p className="text-gray-400 text-sm">
+          Everything the old world was built on is being rewritten. Tap each shift to see Old World vs New World — and
+          where humanity stands.
+        </p>
+      </div>
+      <div className="space-y-3">
+        {PARADIGMS.map((p) => {
+          const OldIcon = p.icon;
+          const NewIcon = p.iconNew;
+          const isOpen = expandedParadigm === p.id;
+          return (
+            <div key={p.id} className="card overflow-hidden">
+              <div className="p-4 cursor-pointer" onClick={() => setExpandedParadigm(isOpen ? null : p.id)}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/15">
+                    <OldIcon size={18} className="text-red-400" />
+                  </div>
+                  <ChevronRight size={14} className="text-gray-600" />
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/15">
+                    <NewIcon size={18} className="text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white text-sm font-medium">
+                      {p.old} → {p.new_}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1 h-1.5 bg-gray-800 rounded-full max-w-[120px]">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${p.readiness}%`,
+                            background: p.readiness < 40 ? "#ef4444" : p.readiness < 60 ? "#f59e0b" : "#10b981",
+                          }}
+                        />
+                      </div>
+                      <span
+                        className="text-xs font-mono"
+                        style={{
+                          color: p.readiness < 40 ? "#ef4444" : p.readiness < 60 ? "#f59e0b" : "#10b981",
+                        }}
+                      >
+                        {p.readiness}%
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronDown size={16} className={`text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </div>
+              </div>
+              {isOpen && (
+                <div className="px-4 pb-4 slide-up">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl p-4 bg-red-950/10 border border-red-900/15">
+                      <h4 className="text-red-400 text-xs font-bold uppercase mb-2">Old Order</h4>
+                      {p.oldPoints.map((pt, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs text-gray-500 mb-1.5">
+                          <div className="w-1 h-1 rounded-full bg-red-500 flex-shrink-0" />
+                          {pt}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-xl p-4 bg-emerald-950/10 border border-emerald-900/15">
+                      <h4 className="text-emerald-400 text-xs font-bold uppercase mb-2">New Order</h4>
+                      {p.newPoints.map((pt, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs text-emerald-400/70 mb-1.5">
+                          <Zap size={8} className="text-emerald-400 flex-shrink-0" />
+                          {pt}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const MyProfilePage = () => {
+    if (!profile || !advisory)
+      return (
+        <div className="card p-8 text-center">
+          <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4 float-gentle">
+            <Fingerprint size={36} className="text-emerald-400" />
+          </div>
+          <h2 className="text-white text-xl font-bold mb-2">Create Your Profile</h2>
+          <p className="text-gray-400 text-sm mb-4 max-w-sm mx-auto">
+            Get your personalized Future Readiness Score and join {networkStats.minds.toLocaleString()} minds building
+            collective intelligence.
+          </p>
+          <button
+            onClick={() => setShowOnboard(true)}
+            className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl text-sm"
+          >
+            Join Now
+          </button>
+        </div>
+      );
+
+    const radarData = Object.entries(advisory.scores).map(([k, v]) => ({
+      subject: k.charAt(0).toUpperCase() + k.slice(1),
+      score: v,
+      fullMark: 100,
+    }));
+    const scoreColor = advisory.overall >= 70 ? "#10b981" : advisory.overall >= 40 ? "#f59e0b" : "#ef4444";
+
+    return (
+      <div className="space-y-4">
+        {/* Score Card */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-white text-lg font-bold">{profile.name}</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge text={profile.sector?.split("/")[0]} color="blue" />
+                <Badge text={profile.province} color="gray" />
+                <Badge text={profile.type} color={profile.type === "military" ? "red" : "green"} />
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="relative w-20 h-20">
+                <svg width="80" height="80" className="-rotate-90">
+                  <circle cx="40" cy="40" r="34" fill="none" stroke="#1f2937" strokeWidth="6" />
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    fill="none"
+                    stroke={scoreColor}
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={`${2 * Math.PI * 34}`}
+                    strokeDashoffset={`${2 * Math.PI * 34 * (1 - advisory.overall / 100)}`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-black" style={{ color: scoreColor }}>
+                    {advisory.overall}
+                  </span>
+                </div>
+              </div>
+              <span className="text-gray-500 text-xs">Readiness</span>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={180}>
+            <RadarChart data={radarData}>
+              <PolarGrid stroke="#1f2937" />
+              <PolarAngleAxis dataKey="subject" stroke="#6b7280" fontSize={10} />
+              <PolarRadiusAxis angle={90} domain={[0, 100]} stroke="#1f2937" fontSize={9} />
+              <Radar dataKey="score" stroke="#10b981" fill="rgba(16,185,129,0.12)" strokeWidth={2} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Opportunities */}
+        {advisory.opps.length > 0 && (
+          <div className="card p-5">
+            <h3 className="text-emerald-400 font-semibold text-sm mb-3 flex items-center gap-2">
+              <Star size={14} /> Your Opportunities
+            </h3>
+            {advisory.opps.map((o, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-2 mb-2 p-3 rounded-xl bg-emerald-950/10 border border-emerald-900/15"
+              >
+                <Zap size={12} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300 text-sm">{o}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Risks */}
+        {advisory.risks.length > 0 && (
+          <div className="card p-5">
+            <h3 className="text-red-400 font-semibold text-sm mb-3 flex items-center gap-2">
+              <AlertTriangle size={14} /> Watch Out For
+            </h3>
+            {advisory.risks.map((r, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-2 mb-2 p-3 rounded-xl bg-red-950/10 border border-red-900/15"
+              >
+                <AlertTriangle size={12} className="text-red-400 mt-0.5 flex-shrink-0" />
+                <span className="text-gray-300 text-sm">{r}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        {advisory.recs.length > 0 && (
+          <div className="card p-5">
+            <h3 className="text-blue-400 font-semibold text-sm mb-3 flex items-center gap-2">
+              <Compass size={14} /> Your Action Plan
+            </h3>
+            {advisory.recs.map((r, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-2 mb-2 p-3 rounded-xl bg-blue-950/10 border border-blue-900/15"
+              >
+                <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-bold">{i + 1}</span>
+                </div>
+                <span className="text-gray-300 text-sm">{r}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── ONBOARDING MODAL ──
+  const OnboardModal = () => {
+    const u = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+    const tc = (c) =>
+      setForm((f) => ({
+        ...f,
+        challenges: f.challenges.includes(c) ? f.challenges.filter((x) => x !== c) : [...f.challenges, c],
+      }));
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)" }}
+      >
+        <div
+          className="card w-full max-w-lg max-h-[85vh] overflow-y-auto scrollbar-thin p-6 pop-in"
+          style={{ background: "rgba(17,24,39,0.95)" }}
+        >
+          <h2 className="text-white text-xl font-bold mb-1">Join the Collective 🌍</h2>
+          <p className="text-gray-400 text-sm mb-5">Your profile makes the intelligence smarter for everyone.</p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-gray-500 text-xs mb-1 block">Name</label>
+              <input
+                className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
+                value={form.name}
+                onChange={(e) => u("name", e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-gray-500 text-xs mb-1 block">Age</label>
+                <input
+                  type="number"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
+                  value={form.age}
+                  onChange={(e) => u("age", parseInt(e.target.value) || 25)}
+                />
+              </div>
+              <div>
+                <label className="text-gray-500 text-xs mb-1 block">Region</label>
+                <select
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+                  value={form.province}
+                  onChange={(e) => u("province", e.target.value)}
+                >
+                  {REGIONS.map((p) => (
+                    <option key={p} value={p} className="bg-gray-900">
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-gray-500 text-xs mb-1 block">Sector</label>
+              <select
+                className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+                value={form.sector}
+                onChange={(e) => u("sector", e.target.value)}
+              >
+                {SECTORS.map((s) => (
+                  <option key={s} value={s} className="bg-gray-900">
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {["civilian", "military", "paramilitary"].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => u("type", t)}
+                  className={`py-2 rounded-xl text-sm transition-all ${form.type === t ? "bg-emerald-600 text-white" : "bg-gray-900 text-gray-500 border border-gray-800 hover:border-gray-700"}`}
+                >
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-gray-500 text-xs mb-1 block">Education</label>
+                <select
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+                  value={form.education}
+                  onChange={(e) => u("education", e.target.value)}
+                >
+                  {[
+                    ["none", "None"],
+                    ["primary", "Primary"],
+                    ["matric", "Matric"],
+                    ["inter", "Intermediate"],
+                    ["bachelors", "Bachelors"],
+                    ["masters", "Masters"],
+                    ["phd", "PhD"],
+                    ["technical", "Technical"],
+                  ].map(([v, l]) => (
+                    <option key={v} value={v} className="bg-gray-900">
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-gray-500 text-xs mb-1 block">Income Level</label>
+                <select
+                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+                  value={form.income}
+                  onChange={(e) => u("income", e.target.value)}
+                >
+                  {[
+                    ["below_25k", "Low"],
+                    ["25k_50k", "Below Average"],
+                    ["50k_100k", "Average"],
+                    ["100k_200k", "Above Average"],
+                    ["above_200k", "High"],
+                  ].map(([v, l]) => (
+                    <option key={v} value={v} className="bg-gray-900">
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-gray-500 text-xs mb-1.5 block">Your Challenges</label>
+              <div className="flex flex-wrap gap-1.5">
+                {CHALLENGES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => tc(c)}
+                    className={`px-2.5 py-1 rounded-lg text-xs transition-all ${form.challenges.includes(c) ? "bg-red-500/15 text-red-400 border border-red-500/20" : "bg-gray-900 text-gray-600 border border-gray-800 hover:text-gray-400"}`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-3 mt-5">
+            <button
+              onClick={() => setShowOnboard(false)}
+              className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-xl text-sm hover:bg-gray-700 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleOnboard}
+              disabled={!form.name.trim()}
+              className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl text-sm hover:from-emerald-500 hover:to-blue-500 disabled:opacity-40 transition-all"
+            >
+              Join {networkStats.minds.toLocaleString()}+ Minds
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ══════════════════════════════════════
+  // PAGE: WORLD SIMULATION & ALLIANCES
+  // ══════════════════════════════════════
+  const LIVE_SHIFTS = [
+    {
+      emoji: "🧠",
+      text: "AI compute shifting → US & China now control 84% of global GPU power",
+      color: "#3b82f6",
+    },
+    {
+      emoji: "☀️",
+      text: "Solar investment ↑ $127B flowed into renewables this quarter — China leads",
+      color: "#10b981",
+    },
+    {
+      emoji: "💰",
+      text: "Sovereign wealth → Nations worldwide pivoting from commodity reserves to tech",
+      color: "#f59e0b",
+    },
+    {
+      emoji: "📡",
+      text: "Digital infrastructure → India's UPI processed 12.2B transactions last month",
+      color: "#8b5cf6",
+    },
+    {
+      emoji: "🌾",
+      text: "Agriculture tech → Africa & South Asia attracting 3x more agri-AI investment",
+      color: "#ec4899",
+    },
+    {
+      emoji: "🔗",
+      text: "Blockchain remittances → Global remittance market saved $5B+ in fees this year",
+      color: "#14b8a6",
+    },
+  ];
+
+  const WealthShiftStrip = () => {
+    const [shiftIdx, setShiftIdx] = useState(0);
+    useEffect(() => {
+      const t = setInterval(() => setShiftIdx((p) => (p + 1) % LIVE_SHIFTS.length), 5000);
+      return () => clearInterval(t);
+    }, []);
+    const s = LIVE_SHIFTS[shiftIdx];
+    return (
+      <div
+        className="mb-3 p-2.5 rounded-xl flex items-center gap-2.5 overflow-hidden"
+        style={{ background: "rgba(10,15,25,0.6)", border: "1px solid rgba(255,255,255,0.04)" }}
+      >
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-soft" />
+          <span className="text-gray-600 text-xs font-bold uppercase tracking-wider">Live</span>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <div className="ticker-item" key={shiftIdx}>
+            <span className="text-sm mr-1.5">{s.emoji}</span>
+            <span className="text-gray-300 text-xs">{s.text}</span>
+          </div>
+        </div>
+        <div className="flex gap-0.5 flex-shrink-0">
+          {LIVE_SHIFTS.map((_, i) => (
+            <div
+              key={i}
+              className="w-1 h-1 rounded-full transition-all"
+              style={{ background: i === shiftIdx ? s.color : "rgba(255,255,255,0.08)" }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const ACTIVITY_ITEMS = [
+    { avatar: "👩‍💻", name: "Aisha Malik", action: "commented on", target: "AI Call Center Scenario", time: "just now" },
+    { avatar: "🧑‍🎓", name: "Hafiz Abdullah", action: "joined alliance", target: "Digital Ummah", time: "12s ago" },
+    { avatar: "👨‍🌾", name: "Muhammad Iqbal", action: "voted in poll", target: "Future of Money", time: "28s ago" },
+    { avatar: "👩‍⚕️", name: "Dr. Fatima", action: "created topic", target: "Mental Health in Tech", time: "45s ago" },
+    { avatar: "🎖️", name: "Brig. Khalid", action: "replied to", target: "Defense AI Thread", time: "1m ago" },
+    { avatar: "👩‍🏫", name: "Prof. Zainab", action: "started alliance", target: "Education Reboot 2030", time: "2m ago" },
+    { avatar: "👷", name: "Hamza Baloch", action: "shared insight on", target: "Global Infrastructure", time: "3m ago" },
+    { avatar: "👩‍💼", name: "Sara Ahmed", action: "reacted 🔥 to", target: "Fintech Revolution Post", time: "3m ago" },
+  ];
+
+  const LiveActivityTicker = () => {
+    const [actIdx, setActIdx] = useState(0);
+    useEffect(() => {
+      const t = setInterval(() => setActIdx((p) => (p + 1) % ACTIVITY_ITEMS.length), 3500);
+      return () => clearInterval(t);
+    }, []);
+    const items = [
+      ACTIVITY_ITEMS[actIdx],
+      ACTIVITY_ITEMS[(actIdx + 1) % ACTIVITY_ITEMS.length],
+      ACTIVITY_ITEMS[(actIdx + 2) % ACTIVITY_ITEMS.length],
+    ];
+    return (
+      <div
+        className="p-3 rounded-xl mb-4"
+        style={{ background: "rgba(10,15,25,0.5)", border: "1px solid rgba(255,255,255,0.04)" }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 pulse-soft" />
+          <span className="text-gray-600 text-xs font-bold uppercase tracking-wider">Activity</span>
+          <span className="text-gray-700 text-xs ml-auto font-mono">
+            {networkStats.interactions.toLocaleString()} interactions
+          </span>
+        </div>
+        <div className="space-y-1.5">
+          {items.map((item, i) => (
+            <div
+              key={`${actIdx}-${i}`}
+              className="ticker-item flex items-center gap-2"
+              style={{ animationDelay: `${i * 0.1}s`, opacity: 1 - i * 0.2 }}
+            >
+              <span className="text-sm flex-shrink-0">{item.avatar}</span>
+              <span className="text-gray-400 text-xs truncate">
+                <span className="text-white font-medium">{item.name}</span> {item.action}{" "}
+                <span className="text-emerald-400">{item.target}</span>
+              </span>
+              <span className="text-gray-700 text-xs flex-shrink-0 ml-auto">{item.time}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const WorldSimPage = () => {
+    const [mapLayer, setMapLayer] = useState("geo"); // geo | mindset | dissolve
+    const [selectedCluster, setSelectedCluster] = useState(null);
+    const [selectedAlliance, setSelectedAlliance] = useState(null);
+    const [showCreateAlliance, setShowCreateAlliance] = useState(false);
+    const [joinedAlliances, setJoinedAlliances] = useState(new Set());
+    const [allianceComment, setAllianceComment] = useState("");
+    const [newAlliance, setNewAlliance] = useState({
+      name: "",
+      worldVision: "",
+      philosophy: "",
+      commitments: ["", "", ""],
+    });
+    const [userAlliances, setUserAlliances] = useState([]);
+    const [routineStep, setRoutineStep] = useState(-1);
+    const [routineAnswers, setRoutineAnswers] = useState({});
+    const [showResults, setShowResults] = useState(false);
+
+    const totalQi = useMemo(() => Object.values(routineAnswers).reduce((a, b) => a + b, 0), [routineAnswers]);
+    const maxQi = ROUTINE_QUESTIONS.reduce((a, q) => a + Math.max(...q.options.map((o) => o.qi)), 0);
+
+    const answerQuestion = (qi) => {
+      const qId = ROUTINE_QUESTIONS[routineStep].id;
+      setRoutineAnswers((prev) => ({ ...prev, [qId]: qi }));
+      if (routineStep < ROUTINE_QUESTIONS.length - 1) setRoutineStep(routineStep + 1);
+      else setShowResults(true);
+    };
+
+    const qiLevel =
+      totalQi >= 100
+        ? { label: "APEX PREDATOR", emoji: "🦅", color: "#10b981", desc: "You're built for the new world. Top 2%." }
+        : totalQi >= 70
+          ? {
+              label: "RISING FORCE",
+              emoji: "🚀",
+              color: "#3b82f6",
+              desc: "Strong foundation. A few upgrades and you're untouchable.",
+            }
+          : totalQi >= 40
+            ? {
+                label: "SLEEPING GIANT",
+                emoji: "⏰",
+                color: "#f59e0b",
+                desc: "Potential wasted. The world rewards action, not potential.",
+              }
+            : {
+                label: "RED ALERT",
+                emoji: "🚨",
+                color: "#ef4444",
+                desc: "Your routine is optimized for a world that no longer exists.",
+              };
+
+    const allAlliances = [...SEED_ALLIANCES, ...userAlliances];
+
+    const handleCreateAlliance = () => {
+      if (!newAlliance.name.trim() || !newAlliance.worldVision.trim()) return;
+      const a = {
+        id: `user_${Date.now()}`,
+        name: newAlliance.name,
+        emoji: "🌟",
+        founder: {
+          name: profile?.name || "Anonymous",
+          avatar: AVATARS[(profile?.name?.length || 3) % AVATARS.length],
+          handle: `@${(profile?.name || "anon").toLowerCase().replace(/\s/g, "_")}`,
+        },
+        members: 1,
+        founded: "just now",
+        worldVision: newAlliance.worldVision,
+        commitments: newAlliance.commitments.filter((c) => c.trim()),
+        philosophy: newAlliance.philosophy,
+        discussion: [],
+        tags: [],
+        mindsets: ["builders"],
+      };
+      setUserAlliances((prev) => [a, ...prev]);
+      setShowCreateAlliance(false);
+      setNewAlliance({ name: "", worldVision: "", philosophy: "", commitments: ["", "", ""] });
+      setSelectedAlliance(a.id);
+    };
+
+    return (
+      <div className="space-y-0">
+        <div className="card p-5 mb-4 relative overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{ background: "radial-gradient(ellipse at 50% 40%, rgba(16,185,129,0.06) 0%, transparent 60%)" }}
+          />
+
+          {/* Layer Switcher */}
+          <div className="relative mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-white font-bold text-base relative">How the World is Grouped</h2>
+              <div className="flex gap-1">
+                {[
+                  ["geo", "🌍 Geography"],
+                  ["mindset", "🧠 Mindset"],
+                  ["dissolve", "✨ New World"],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setMapLayer(key);
+                      setSelectedCluster(null);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs transition-all ${mapLayer === key ? "bg-emerald-600 text-white" : "bg-gray-800/80 text-gray-400 hover:text-white"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs mb-3">
+              {mapLayer === "geo"
+                ? "Today: The world groups humans by borders they were born inside. Your passport determines your destiny."
+                : mapLayer === "mindset"
+                  ? "Tomorrow: Borders dissolve. People cluster by HOW THEY THINK — builders find builders, seekers find seekers, across every continent."
+                  : 'The future: Geography, caste, nationality mean nothing. Your MINDSET is your tribe. A builder in Balochistan has more in common with a builder in Berlin than with their neighbor.'}
+            </p>
+          </div>
+
+          {/* SVG MAP */}
+          <div
+            className="relative rounded-xl overflow-hidden mb-4"
+            style={{ background: "rgba(10,15,25,0.8)", border: "1px solid rgba(255,255,255,0.04)" }}
+          >
+            <svg viewBox="0 0 100 80" className="w-full" style={{ minHeight: 200 }}>
+              {/* Grid lines */}
+              {[20, 40, 60, 80].map((x) => (
+                <line key={`v${x}`} x1={x} y1={0} x2={x} y2={80} stroke="rgba(255,255,255,0.02)" />
+              ))}
+              {[20, 40, 60].map((y) => (
+                <line key={`h${y}`} x1={0} y1={y} x2={100} y2={y} stroke="rgba(255,255,255,0.02)" />
+              ))}
+
+              {/* Wealth flow lines */}
+              {mapLayer === "geo" &&
+                WEALTH_FLOWS.map((f, i) => {
+                  const from = GEO_CLUSTERS.find((c) => c.id === f.from);
+                  const to = GEO_CLUSTERS.find((c) => c.id === f.to);
+                  if (!from || !to) return null;
+                  return (
+                    <g key={`flow-${i}`}>
+                      <line
+                        x1={from.x}
+                        y1={from.y}
+                        x2={to.x}
+                        y2={to.y}
+                        stroke="rgba(255,255,255,0.03)"
+                        strokeWidth={f.intensity * 1.2}
+                      />
+                      <line
+                        x1={from.x}
+                        y1={from.y}
+                        x2={to.x}
+                        y2={to.y}
+                        stroke={to.wealthTrend === "up" ? "#10b981" : "#3b82f6"}
+                        strokeWidth={f.intensity * 0.6}
+                        className="wealth-flow"
+                        style={{ animationDuration: `${1.5 + i * 0.3}s` }}
+                      />
+                      <circle
+                        r={0.6}
+                        fill={to.wealthTrend === "up" ? "#10b981" : "#3b82f6"}
+                        className="wealth-flow-glow"
+                        style={{ animationDelay: `${i * 0.4}s` }}
+                      >
+                        <animateMotion
+                          dur={`${3 + i * 0.5}s`}
+                          repeatCount="indefinite"
+                          path={`M${from.x},${from.y} L${to.x},${to.y}`}
+                        />
+                      </circle>
+                    </g>
+                  );
+                })}
+
+              {mapLayer === "geo" &&
+                GEO_CLUSTERS.map((c, i) => (
+                  <g
+                    key={c.id}
+                    onClick={() => setSelectedCluster(selectedCluster === c.id ? null : c.id)}
+                    className="cursor-pointer"
+                  >
+                    <circle cx={c.x} cy={c.y} r={2 + c.wealth * 0.12} fill={c.color} opacity={0.07}>
+                      <animate
+                        attributeName="r"
+                        values={`${1.5 + c.wealth * 0.1};${2.5 + c.wealth * 0.14};${1.5 + c.wealth * 0.1}`}
+                        dur={`${3 + i * 0.5}s`}
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                    <circle cx={c.x} cy={c.y} r={2.5} fill={c.color} opacity={0.6} />
+                    <text
+                      x={c.x + 3.5}
+                      y={c.y - 1}
+                      textAnchor="middle"
+                      fontSize="2.2"
+                      opacity="0.7"
+                      fill={c.wealthTrend === "up" ? "#10b981" : c.wealthTrend === "down" ? "#ef4444" : "#f59e0b"}
+                    >
+                      {c.wealthTrend === "up" ? "↑" : c.wealthTrend === "down" ? "↓" : "→"}
+                    </text>
+                    <text x={c.x} y={c.y + 6.5} textAnchor="middle" fill={c.color} fontSize="2.5" opacity="0.8">
+                      {c.label}
+                    </text>
+                    <rect x={c.x - 6} y={c.y + 8} width={12} height={1.2} rx={0.6} fill="rgba(255,255,255,0.05)" />
+                    <rect
+                      x={c.x - 6}
+                      y={c.y + 8}
+                      width={c.wealth * 0.28}
+                      height={1.2}
+                      rx={0.6}
+                      fill={c.color}
+                      opacity={0.5}
+                      className="influence-bar"
+                      style={{ animationDelay: `${i * 0.1}s` }}
+                    />
+                    <text x={c.x} y={c.y + 12} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize="1.5">
+                      {c.wealth}% global wealth
+                    </text>
+                  </g>
+                ))}
+
+              {mapLayer === "mindset" &&
+                (() => {
+                  const positions = [
+                    [20, 25],
+                    [50, 18],
+                    [80, 25],
+                    [35, 50],
+                    [65, 50],
+                  ];
+                  const flows = [
+                    [0, 1],
+                    [1, 2],
+                    [0, 3],
+                    [2, 4],
+                    [3, 4],
+                    [1, 3],
+                    [1, 4],
+                  ];
+                  return flows.map(([a, b], fi) => (
+                    <g key={`mf-${fi}`}>
+                      <line
+                        x1={positions[a][0]}
+                        y1={positions[a][1]}
+                        x2={positions[b][0]}
+                        y2={positions[b][1]}
+                        stroke="rgba(255,255,255,0.03)"
+                        strokeWidth="0.4"
+                      />
+                      <line
+                        x1={positions[a][0]}
+                        y1={positions[a][1]}
+                        x2={positions[b][0]}
+                        y2={positions[b][1]}
+                        stroke="rgba(16,185,129,0.2)"
+                        strokeWidth="0.25"
+                        className="wealth-flow"
+                        style={{ animationDuration: `${2 + fi * 0.3}s` }}
+                      />
+                    </g>
+                  ));
+                })()}
+
+              {mapLayer === "mindset" &&
+                MINDSET_CLUSTERS.filter((c) => c.winning).map((c, i) => {
+                  const positions = [
+                    [20, 25],
+                    [50, 18],
+                    [80, 25],
+                    [35, 50],
+                    [65, 50],
+                  ];
+                  const [cx, cy] = positions[i] || [50, 40];
+                  return (
+                    <g
+                      key={c.id}
+                      onClick={() => setSelectedCluster(selectedCluster === c.id ? null : c.id)}
+                      className="cursor-pointer"
+                    >
+                      <circle cx={cx} cy={cy} r={c.influence * 0.3} fill={c.color} opacity={0.06}>
+                        <animate
+                          attributeName="r"
+                          values={`${c.influence * 0.28};${c.influence * 0.34};${c.influence * 0.28}`}
+                          dur={`${4 + i}s`}
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+                      <circle cx={cx} cy={cy} r={c.size / 8} fill={c.color} opacity={0.4} />
+                      {c.influenceTrend === "rising" && (
+                        <text x={cx + c.size / 8 + 1.5} y={cy - 1} fontSize="2" fill="#10b981" className="breathe">
+                          ↑
+                        </text>
+                      )}
+                      <text x={cx} y={cy - 1} textAnchor="middle" fontSize="4">
+                        {c.emoji}
+                      </text>
+                      <text x={cx} y={cy + 4} textAnchor="middle" fill={c.color} fontSize="2.2" fontWeight="bold">
+                        {c.label}
+                      </text>
+                      <text x={cx} y={cy + 7} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="1.8">
+                        {c.members}
+                      </text>
+                      <rect x={cx - 5} y={cy + 8.5} width={10} height={1} rx={0.5} fill="rgba(255,255,255,0.04)" />
+                      <rect
+                        x={cx - 5}
+                        y={cy + 8.5}
+                        width={c.influence * 0.3}
+                        height={1}
+                        rx={0.5}
+                        fill={c.color}
+                        opacity={0.5}
+                        className="influence-bar"
+                        style={{ animationDelay: `${i * 0.12}s` }}
+                      />
+                      <text x={cx} y={cy + 12} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="1.3">
+                        {c.influence}% influence
+                      </text>
+                    </g>
+                  );
+                })}
+
+              {mapLayer === "dissolve" && (
+                <g>
+                  {MINDSET_CLUSTERS.filter((c) => c.winning).map((c, i) => {
+                    const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+                    const cx = 50 + Math.cos(angle) * 22;
+                    const cy = 38 + Math.sin(angle) * 18;
+                    return (
+                      <g key={c.id}>
+                        <line x1={50} y1={38} x2={cx} y2={cy} stroke={c.color} strokeWidth="0.3" opacity="0.3" />
+                        {MINDSET_CLUSTERS.filter((c2) => c2.winning).map((c2, j) => {
+                          if (j <= i) return null;
+                          const a2 = (j / 5) * Math.PI * 2 - Math.PI / 2;
+                          return (
+                            <line
+                              key={j}
+                              x1={cx}
+                              y1={cy}
+                              x2={50 + Math.cos(a2) * 22}
+                              y2={38 + Math.sin(a2) * 18}
+                              stroke="rgba(255,255,255,0.05)"
+                              strokeWidth="0.2"
+                            />
+                          );
+                        })}
+                        <circle cx={cx} cy={cy} r={3} fill={c.color} opacity={0.2}>
+                          <animate attributeName="r" values="2.5;3.5;2.5" dur={`${3 + i}s`} repeatCount="indefinite" />
+                        </circle>
+                        <text x={cx} y={cy + 0.5} textAnchor="middle" fontSize="3.5">
+                          {c.emoji}
+                        </text>
+                        <text x={cx} y={cy + 4.5} textAnchor="middle" fill={c.color} fontSize="1.8">
+                          {c.label}
+                        </text>
+                      </g>
+                    );
+                  })}
+                  <text x="50" y="38" textAnchor="middle" fill="rgba(16,185,129,0.15)" fontSize="5" fontWeight="bold">
+                    ONE
+                  </text>
+                  <text x="50" y="42" textAnchor="middle" fill="rgba(16,185,129,0.1)" fontSize="2.5">
+                    Mindset = Your Tribe
+                  </text>
+                </g>
+              )}
+            </svg>
+          </div>
+
+          <WealthShiftStrip />
+
+          {selectedCluster &&
+            mapLayer === "geo" &&
+            (() => {
+              const c = GEO_CLUSTERS.find((g) => g.id === selectedCluster);
+              if (!c) return null;
+              return (
+                <div
+                  className="p-3 rounded-xl slide-up mb-2"
+                  style={{ background: `${c.color}08`, border: `1px solid ${c.color}15` }}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h4 className="text-white text-sm font-medium">
+                      {c.label} <span className="text-gray-500 text-xs ml-1">{c.pop}</span>
+                    </h4>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <span className="text-gray-600 text-xs">Wealth</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-mono font-bold">{c.wealth}%</span>
+                          <span
+                            className={`text-xs ${c.wealthTrend === "up" ? "text-emerald-400" : c.wealthTrend === "down" ? "text-red-400" : "text-yellow-400"}`}
+                          >
+                            {c.wealthTrend === "up" ? "↑" : c.wealthTrend === "down" ? "↓" : "→"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-gray-600 text-xs">Influence</span>
+                        <div className="text-white text-xs font-mono font-bold">{c.influence}%</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {c.groups.map((g, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded-lg text-xs" style={{ color: c.color, background: `${c.color}10` }}>
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-gray-500 text-xs mt-2 italic">
+                    In the new world, these geographic groupings dissolve. Switch to "Mindset" view →
+                  </p>
+                </div>
+              );
+            })()}
+
+          {selectedCluster &&
+            mapLayer === "mindset" &&
+            (() => {
+              const c = MINDSET_CLUSTERS.find((m) => m.id === selectedCluster);
+              if (!c) return null;
+              return (
+                <div
+                  className="p-4 rounded-xl slide-up mb-2"
+                  style={{ background: `${c.color}08`, border: `1px solid ${c.color}15` }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{c.emoji}</span>
+                      <div>
+                        <h4 className="text-white text-sm font-bold">{c.label}</h4>
+                        <span className="text-gray-500 text-xs">{c.members} people worldwide</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <span className="text-gray-600 text-xs">Influence</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-white text-xs font-mono font-bold">{c.influence}%</span>
+                          <span
+                            className={`text-xs ${c.influenceTrend === "rising" ? "text-emerald-400" : c.influenceTrend === "falling" ? "text-red-400" : "text-yellow-400"}`}
+                          >
+                            {c.influenceTrend === "rising" ? "↑" : c.influenceTrend === "falling" ? "↓" : "→"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-gray-300 text-sm mb-2">{c.desc}</p>
+                  <div className="p-2.5 rounded-lg bg-gray-900/50 mb-2">
+                    <span className="text-gray-500 text-xs">Core belief:</span>
+                    <p className="text-gray-200 text-xs italic mt-0.5">"{c.beliefs}"</p>
+                  </div>
+                  <p className="text-gray-400 text-xs">
+                    <span className="text-gray-500">Who:</span> {c.who}
+                  </p>
+                </div>
+              );
+            })()}
+        </div>
+
+        <LiveActivityTicker />
+
+        <div className="card p-5 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-white font-bold text-base flex items-center gap-2">🤝 New World Alliances</h2>
+              <p className="text-gray-500 text-xs">
+                Movements forming across borders. Not by nationality — by shared vision for the future.
+              </p>
+            </div>
+            {profile && (
+              <button
+                onClick={() => setShowCreateAlliance(true)}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-all flex items-center gap-1.5"
+              >
+                <Sparkles size={12} /> Create Alliance
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {allAlliances.map((a) => {
+              const isOpen = selectedAlliance === a.id;
+              const isJoined = joinedAlliances.has(a.id);
+              return (
+                <div
+                  key={a.id}
+                  className={`rounded-xl overflow-hidden transition-all ${isOpen ? "ring-1 ring-emerald-500/20" : ""}`}
+                  style={{ background: "rgba(17,24,39,0.5)", border: "1px solid rgba(255,255,255,0.06)" }}
+                >
+                  <div className="p-4 cursor-pointer" onClick={() => setSelectedAlliance(isOpen ? null : a.id)}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{a.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-semibold text-sm">{a.name}</h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-gray-500 text-xs">{a.founder.name}</span>
+                          <span className="text-gray-700 text-xs">·</span>
+                          <span className="text-emerald-400 text-xs font-mono">
+                            {typeof a.members === "number" ? a.members.toLocaleString() : a.members} members
+                          </span>
+                          <span className="text-gray-700 text-xs">·</span>
+                          <span className="text-gray-600 text-xs">{a.founded}</span>
+                        </div>
+                      </div>
+                      {isJoined ? (
+                        <span className="px-2.5 py-1 bg-emerald-500/15 text-emerald-400 text-xs rounded-lg border border-emerald-500/20">
+                          Joined ✓
+                        </span>
+                      ) : (
+                        <ChevronDown size={16} className={`text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      )}
+                    </div>
+                  </div>
+
+                  {isOpen && (
+                    <div className="px-4 pb-4 space-y-3 slide-up">
+                      <div
+                        className="p-4 rounded-xl"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(16,185,129,0.05), rgba(59,130,246,0.05))",
+                          border: "1px solid rgba(16,185,129,0.1)",
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Eye size={14} className="text-emerald-400" />
+                          <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider">The World We Want</span>
+                        </div>
+                        <p className="text-gray-200 text-sm leading-relaxed italic">"{a.worldVision}"</p>
+                      </div>
+
+                      {a.philosophy && (
+                        <div className="p-3 rounded-xl bg-gray-900/50 border border-gray-800/50">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <Lightbulb size={12} className="text-yellow-400" />
+                            <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Philosophy</span>
+                          </div>
+                          <p className="text-gray-300 text-xs leading-relaxed">{a.philosophy}</p>
+                        </div>
+                      )}
+
+                      {a.commitments?.length > 0 && (
+                        <div className="p-3 rounded-xl bg-gray-900/50 border border-gray-800/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle2 size={12} className="text-blue-400" />
+                            <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Member Commitments</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            {a.commitments.map((c, i) => (
+                              <div key={i} className="flex items-start gap-2">
+                                <div className="w-5 h-5 rounded-full bg-blue-600/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <span className="text-blue-400 text-xs">{i + 1}</span>
+                                </div>
+                                <span className="text-gray-300 text-xs leading-relaxed">{c}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {!isJoined && profile && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setJoinedAlliances((prev) => new Set([...prev, a.id]));
+                          }}
+                          className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white text-sm font-medium rounded-xl transition-all"
+                        >
+                          Join This Alliance & Accept Commitments
+                        </button>
+                      )}
+                      {!profile && (
+                        <button
+                          onClick={() => setShowOnboard(true)}
+                          className="w-full py-2.5 bg-gray-800 text-gray-400 text-sm rounded-xl hover:bg-gray-700 transition-all"
+                        >
+                          Create profile to join alliances
+                        </button>
+                      )}
+
+                      {a.discussion?.length > 0 && (
+                        <div className="pt-3 border-t border-gray-800/50">
+                          <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Alliance Discussion</span>
+                          <div className="mt-2 space-y-2.5">
+                            {a.discussion.map((msg, i) => (
+                              <div key={i} className="flex gap-2.5">
+                                <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-sm flex-shrink-0">
+                                  {msg.user.avatar}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-white text-xs font-medium">{msg.user.name}</span>
+                                    <span className="text-gray-700 text-xs">{msg.time}</span>
+                                  </div>
+                                  <p className="text-gray-300 text-xs leading-relaxed mt-0.5">{msg.text}</p>
+                                  <button className="text-gray-600 text-xs hover:text-emerald-400 transition-colors mt-1 flex items-center gap-1">
+                                    <ThumbsUp size={10} /> {msg.likes}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {profile && isJoined && (
+                            <div className="flex gap-2 mt-3">
+                              <input
+                                value={allianceComment}
+                                onChange={(e) => setAllianceComment(e.target.value)}
+                                placeholder="Share your thoughts or ask the alliance..."
+                                className="flex-1 bg-gray-900/50 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                              />
+                              <button className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs hover:bg-emerald-500 transition-all">
+                                <Send size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="card p-5 mb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-2xl">⚡</span>
+            <div>
+              <h2 className="text-white font-bold text-base">What's YOUR Qi?</h2>
+              <p className="text-gray-500 text-xs">8 questions. 60 seconds. Find out if your daily life builds power or burns it.</p>
+            </div>
+          </div>
+
+          {routineStep === -1 && !showResults && (
+            <div className="text-center py-4">
+              <p className="text-gray-300 text-sm mb-3">
+                Every human generates <span className="text-emerald-400 font-bold">Qi</span> — life energy that compounds into wealth, health, and influence.
+              </p>
+              <button
+                onClick={() => setRoutineStep(0)}
+                className="px-8 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white font-bold rounded-xl transition-all text-sm"
+              >
+                Discover My Qi ⚡
+              </button>
+            </div>
+          )}
+
+          {routineStep >= 0 && !showResults && (
+            <div className="slide-up">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex-1 h-1.5 bg-gray-800 rounded-full">
+                  <div
+                    className="h-full bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full transition-all duration-500"
+                    style={{ width: `${((routineStep + 1) / ROUTINE_QUESTIONS.length) * 100}%` }}
+                  />
+                </div>
+                <span className="text-gray-500 text-xs font-mono">
+                  {routineStep + 1}/{ROUTINE_QUESTIONS.length}
+                </span>
+              </div>
+              <h3 className="text-white text-sm font-medium mb-3">{ROUTINE_QUESTIONS[routineStep].q}</h3>
+              <div className="space-y-2">
+                {ROUTINE_QUESTIONS[routineStep].options.map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => answerQuestion(opt.qi)}
+                    className="w-full text-left p-3 rounded-xl transition-all hover:border-emerald-500/30 group"
+                    style={{ background: "rgba(17,24,39,0.5)", border: "1px solid rgba(255,255,255,0.05)" }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-200 text-sm">{opt.text}</span>
+                      <span className="text-emerald-400 text-xs font-mono font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                        +{opt.qi} Qi
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-xs mt-0.5 group-hover:text-gray-400 transition-colors">{opt.tag}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showResults && (
+            <div className="slide-up">
+              <div className="text-center mb-4">
+                <div className="text-4xl mb-1">{qiLevel.emoji}</div>
+                <div className="text-3xl font-black font-mono" style={{ color: qiLevel.color }}>
+                  {totalQi}
+                  <span className="text-base text-gray-500">/{maxQi} Qi</span>
+                </div>
+                <div className="font-bold text-sm mt-1" style={{ color: qiLevel.color }}>
+                  {qiLevel.label}
+                </div>
+                <p className="text-gray-400 text-xs mt-1">{qiLevel.desc}</p>
+              </div>
+              <div className="p-3 rounded-xl border mb-3" style={{ background: `${qiLevel.color}08`, borderColor: `${qiLevel.color}20` }}>
+                <p className="text-gray-300 text-xs leading-relaxed">
+                  {totalQi >= 70
+                    ? "Your routine compounds into real power. The gap between you and average is widening in your favor every day."
+                    : totalQi >= 40
+                      ? "You're leaking Qi through distractions. Fix 2-3 areas and you jump to the top tier."
+                      : "Your routine is built for a dead world. Start changing ONE habit today."}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setRoutineStep(-1);
+                  setRoutineAnswers({});
+                  setShowResults(false);
+                }}
+                className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-400 text-xs rounded-xl transition-all"
+              >
+                Retake
+              </button>
+            </div>
+          )}
+        </div>
+
+        {showCreateAlliance && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(12px)" }}
+          >
+            <div
+              className="card w-full max-w-lg max-h-[85vh] overflow-y-auto scrollbar-thin p-6 pop-in"
+              style={{ background: "rgba(17,24,39,0.95)" }}
+            >
+              <h2 className="text-white text-lg font-bold mb-1">🌟 Create a New Alliance</h2>
+              <p className="text-gray-400 text-sm mb-4">
+                Start a movement. Define the world you want. Others will join if your vision resonates.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-gray-400 text-xs mb-1 block">Alliance Name</label>
+                  <input
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
+                    value={newAlliance.name}
+                    onChange={(e) => setNewAlliance((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="e.g., 'Digital Farmers Worldwide'"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-gray-400 text-xs mb-1 block flex items-center gap-1.5">
+                    <Eye size={12} className="text-emerald-400" /> What world do you want your children to live in?
+                  </label>
+                  <textarea
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30 resize-none min-h-[80px]"
+                    value={newAlliance.worldVision}
+                    onChange={(e) => setNewAlliance((p) => ({ ...p, worldVision: e.target.value }))}
+                    placeholder="Describe the future you're building toward..."
+                  />
+                </div>
+
+                <div>
+                  <label className="text-gray-400 text-xs mb-1 block flex items-center gap-1.5">
+                    <Lightbulb size={12} className="text-yellow-400" /> Your philosophy in one paragraph
+                  </label>
+                  <textarea
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30 resize-none min-h-[60px]"
+                    value={newAlliance.philosophy}
+                    onChange={(e) => setNewAlliance((p) => ({ ...p, philosophy: e.target.value }))}
+                    placeholder="What do you believe that most people don't?"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-gray-400 text-xs mb-2 block flex items-center gap-1.5">
+                    <CheckCircle2 size={12} className="text-blue-400" /> Commitments for members (what they pledge to do)
+                  </label>
+                  {newAlliance.commitments.map((c, i) => (
+                    <div key={i} className="flex items-center gap-2 mb-2">
+                      <div className="w-5 h-5 rounded-full bg-blue-600/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-400 text-xs">{i + 1}</span>
+                      </div>
+                      <input
+                        className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30"
+                        value={c}
+                        onChange={(e) => {
+                          const nc = [...newAlliance.commitments];
+                          nc[i] = e.target.value;
+                          setNewAlliance((p) => ({ ...p, commitments: nc }));
+                        }}
+                        placeholder={`Commitment ${i + 1}`}
+                      />
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setNewAlliance((p) => ({ ...p, commitments: [...p.commitments, ""] }))}
+                    className="text-emerald-400 text-xs hover:text-emerald-300 transition-colors"
+                  >
+                    + Add another commitment
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={() => setShowCreateAlliance(false)}
+                  className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-xl text-sm hover:bg-gray-700 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateAlliance}
+                  disabled={!newAlliance.name.trim() || !newAlliance.worldVision.trim()}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl text-sm hover:from-emerald-500 hover:to-blue-500 disabled:opacity-40 transition-all"
+                >
+                  Launch Alliance 🚀
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const tabs = [
+    { id: "feed", label: "Feed", icon: Zap },
+    { id: "world", label: "World Sim", icon: Globe },
+    { id: "paradigm", label: "Shifts", icon: GitBranch },
+    { id: "profile", label: "Me", icon: User },
+  ];
+
+  const currentPage =
+    tab === "feed" ? <FeedPage /> : tab === "world" ? <WorldSimPage /> : tab === "paradigm" ? <ParadigmPage /> : <MyProfilePage />;
+
+  return (
+    <div className="h-screen bg-gray-950 text-white flex flex-col overflow-hidden">
+      <style>{css}</style>
+
+      <header className="flex-shrink-0 border-b border-gray-800/50 bg-gray-950/90" style={{ backdropFilter: "blur(12px)" }}>
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
+              <Flag size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-white leading-none">
+                MindShift<span className="text-gradient-green">360</span>
+              </h1>
+              <span className="text-gray-600 text-xs leading-none">Collective Intelligence</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-soft" />
+              <span className="font-mono">{networkStats.minds.toLocaleString()}</span>
+            </div>
+            {profile ? (
+              <div
+                className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-sm cursor-pointer hover:ring-2 hover:ring-emerald-500/30 transition-all"
+                onClick={() => setTab("profile")}
+              >
+                {AVATARS[(profile.name?.length || 0) % AVATARS.length]}
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowOnboard(true)}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-all"
+              >
+                Join
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-hidden flex">
+        <main className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="max-w-2xl mx-auto px-4 py-4">{currentPage}</div>
+        </main>
+
+        <aside className="w-72 border-l border-gray-800/50 overflow-y-auto scrollbar-thin hidden lg:block p-4">
+          <div className="mb-6">
+            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+              <TrendingUp size={14} className="text-emerald-400" /> Trending Globally
+            </h3>
+            <div className="space-y-1">
+              {TRENDING.map((t, i) => (
+                <div key={i} className="trend-tag p-2.5 rounded-xl border border-transparent cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-400 text-sm font-medium">#{t.tag}</span>
+                    {t.trend === "new" && <Badge text="NEW" color="purple" />}
+                  </div>
+                  <span className="text-gray-600 text-xs">{t.posts} posts</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card p-4 mb-4">
+            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+              <Network size={14} className="text-blue-400" /> Network Health
+            </h3>
+            <div className="space-y-2.5">
+              {[
+                { label: "Connected Minds", value: networkStats.minds.toLocaleString(), color: "#10b981" },
+                { label: "Total Interactions", value: networkStats.interactions.toLocaleString(), color: "#3b82f6" },
+                { label: "Prediction Accuracy", value: `${networkStats.accuracy.toFixed(1)}%`, color: "#8b5cf6" },
+              ].map((s, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-gray-500 text-xs">{s.label}</span>
+                  <span className="text-sm font-mono font-medium" style={{ color: s.color }}>
+                    {s.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-gray-700 text-xs mt-3 italic">Gets smarter with every interaction</p>
+          </div>
+
+          <div className="card p-4">
+            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+              <GitBranch size={14} className="text-purple-400" /> Paradigm Readiness
+            </h3>
+            <div className="space-y-2">
+              {PARADIGMS.map((p, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-800/30 rounded-lg p-1.5 -mx-1.5 transition-all"
+                  onClick={() => {
+                    setTab("paradigm");
+                    setExpandedParadigm(p.id);
+                  }}
+                >
+                  <span className="text-gray-400 text-xs flex-1 truncate">
+                    {p.old} → {p.new_}
+                  </span>
+                  <div className="w-16 h-1.5 bg-gray-800 rounded-full">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${p.readiness}%`,
+                        background: p.readiness < 40 ? "#ef4444" : p.readiness < 60 ? "#f59e0b" : "#10b981",
+                      }}
+                    />
+                  </div>
+                  <span
+                    className="text-xs font-mono w-8 text-right"
+                    style={{ color: p.readiness < 40 ? "#ef4444" : p.readiness < 60 ? "#f59e0b" : "#10b981" }}
+                  >
+                    {p.readiness}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <nav className="flex-shrink-0 border-t border-gray-800/50 bg-gray-950/90" style={{ backdropFilter: "blur(12px)" }}>
+        <div className="max-w-3xl mx-auto flex">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex-1 py-3 flex flex-col items-center gap-1 transition-all ${tab === t.id ? "text-emerald-400" : "text-gray-600 hover:text-gray-400"}`}
+            >
+              <t.icon size={20} />
+              <span className="text-xs">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {showOnboard && <OnboardModal />}
+    </div>
+  );
+}
