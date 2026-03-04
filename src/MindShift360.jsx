@@ -490,6 +490,34 @@ const TRENDING = [
   { tag: "DigitalNomad", posts: "3.2K", trend: "new" },
 ];
 
+const REWIRE_STACK = [
+  {
+    id: "intelligence",
+    icon: Brain,
+    title: "AI empowers individuals",
+    detail: "One person with AI can now execute like a full legacy team.",
+  },
+  {
+    id: "infrastructure",
+    icon: Bot,
+    title: "Robotics powers infrastructure",
+    detail: "Physical systems in food, water, logistics, and energy can run continuously.",
+  },
+  {
+    id: "ownership",
+    icon: Binary,
+    title: "Web3 coordinates ownership",
+    detail: "Programmable settlement allows global coordination with local control.",
+  },
+];
+
+const NUCLEUS_SYSTEMS = [
+  { id: "food", emoji: "🌾", label: "Food Loop", detail: "Autonomous growing, storage, and distribution" },
+  { id: "water", emoji: "💧", label: "Water Loop", detail: "Sensors, reuse, and resilient irrigation" },
+  { id: "energy", emoji: "⚡", label: "Energy Loop", detail: "Local microgrids and autonomous balancing" },
+  { id: "logistics", emoji: "📦", label: "Logistics Loop", detail: "Shared fleets, routing, and fulfillment" },
+];
+
 // ── PARADIGM SHIFTS ──
 const PARADIGMS = [
   {
@@ -1192,6 +1220,23 @@ export default function MindShift360() {
     [0, 6, 14, 25, 39, 52].map((age) => createLiveEvent(age)),
   );
   const [apiConnected, setApiConnected] = useState(false);
+  const [shiftIdx, setShiftIdx] = useState(0);
+  const [mapLayer, setMapLayer] = useState("geo");
+  const [selectedCluster, setSelectedCluster] = useState(null);
+  const [selectedAlliance, setSelectedAlliance] = useState(null);
+  const [showCreateAlliance, setShowCreateAlliance] = useState(false);
+  const [joinedAlliances, setJoinedAlliances] = useState(new Set());
+  const [allianceComment, setAllianceComment] = useState("");
+  const [newAlliance, setNewAlliance] = useState({
+    name: "",
+    worldVision: "",
+    philosophy: "",
+    commitments: ["", "", ""],
+  });
+  const [userAlliances, setUserAlliances] = useState([]);
+  const [routineStep, setRoutineStep] = useState(-1);
+  const [routineAnswers, setRoutineAnswers] = useState({});
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1225,9 +1270,6 @@ export default function MindShift360() {
             seatsLeft: payload.fomoStats.seatsLeft ?? stats.seatsLeft,
           }));
         }
-        if (Array.isArray(payload?.liveEvents) && payload.liveEvents.length > 0) {
-          setLiveEvents(payload.liveEvents.map(normalizeLiveEvent));
-        }
       } catch {
         if (!cancelled) setApiConnected(false);
       }
@@ -1239,6 +1281,21 @@ export default function MindShift360() {
       cancelled = true;
       clearInterval(interval);
     };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveEvents((events) => {
+        const aged = events.map((event) => ({ ...event, ageSec: event.ageSec + 4 }));
+        return [createLiveEvent(0), ...aged].slice(0, 8).map(normalizeLiveEvent);
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const ticker = setInterval(() => setShiftIdx((prev) => (prev + 1) % LIVE_SHIFTS.length), 5000);
+    return () => clearInterval(ticker);
   }, []);
 
   useEffect(() => {
@@ -1265,11 +1322,6 @@ export default function MindShift360() {
           nextDropInMin: resetWindow ? randomRange(12, 20) : stats.nextDropInMin - 1,
           seatsLeft: resetWindow ? randomRange(40, 85) : Math.max(7, stats.seatsLeft - (Math.random() > 0.45 ? 1 : 0)),
         };
-      });
-
-      setLiveEvents((events) => {
-        const aged = events.map((event) => ({ ...event, ageSec: event.ageSec + 4 }));
-        return [createLiveEvent(0), ...aged].slice(0, 8);
       });
     }, 4000);
 
@@ -1368,6 +1420,84 @@ export default function MindShift360() {
     setShowOnboard(false);
     setNetworkStats((s) => ({ ...s, minds: s.minds + 1 }));
   }, [form]);
+
+  const totalQi = useMemo(() => Object.values(routineAnswers).reduce((sum, value) => sum + value, 0), [routineAnswers]);
+  const maxQi = useMemo(
+    () => ROUTINE_QUESTIONS.reduce((sum, question) => sum + Math.max(...question.options.map((option) => option.qi)), 0),
+    [],
+  );
+
+  const qiLevel = useMemo(() => {
+    if (totalQi >= 100) {
+      return { label: "APEX PREDATOR", emoji: "🦅", color: "#10b981", desc: "You're built for the new world. Top 2%." };
+    }
+    if (totalQi >= 70) {
+      return {
+        label: "RISING FORCE",
+        emoji: "🚀",
+        color: "#3b82f6",
+        desc: "Strong foundation. A few upgrades and you're untouchable.",
+      };
+    }
+    if (totalQi >= 40) {
+      return {
+        label: "SLEEPING GIANT",
+        emoji: "⏰",
+        color: "#f59e0b",
+        desc: "Potential wasted. The world rewards action, not potential.",
+      };
+    }
+    return {
+      label: "RED ALERT",
+      emoji: "🚨",
+      color: "#ef4444",
+      desc: "Your routine is optimized for a world that no longer exists.",
+    };
+  }, [totalQi]);
+
+  const allAlliances = useMemo(() => [...SEED_ALLIANCES, ...userAlliances], [userAlliances]);
+
+  const answerQuestion = useCallback(
+    (qi) => {
+      const question = ROUTINE_QUESTIONS[routineStep];
+      if (!question) return;
+      setRoutineAnswers((prev) => ({ ...prev, [question.id]: qi }));
+      if (routineStep < ROUTINE_QUESTIONS.length - 1) {
+        setRoutineStep(routineStep + 1);
+      } else {
+        setShowResults(true);
+      }
+    },
+    [routineStep],
+  );
+
+  const handleCreateAlliance = useCallback(() => {
+    if (!newAlliance.name.trim() || !newAlliance.worldVision.trim()) return;
+
+    const alliance = {
+      id: `user_${Date.now()}`,
+      name: newAlliance.name,
+      emoji: "🌟",
+      founder: {
+        name: profile?.name || "Anonymous",
+        avatar: AVATARS[(profile?.name?.length || 3) % AVATARS.length],
+        handle: `@${(profile?.name || "anon").toLowerCase().replace(/\s/g, "_")}`,
+      },
+      members: 1,
+      founded: "just now",
+      worldVision: newAlliance.worldVision,
+      commitments: newAlliance.commitments.filter((commitment) => commitment.trim()),
+      philosophy: newAlliance.philosophy,
+      discussion: [],
+      tags: [],
+      mindsets: ["builders"],
+    };
+
+    setUserAlliances((prev) => [alliance, ...prev]);
+    setShowCreateAlliance(false);
+    setNewAlliance({ name: "", worldVision: "", philosophy: "", commitments: ["", "", ""] });
+    setSelectedAlliance(alliance.id);
+  }, [newAlliance, profile]);
 
   // Advisory
   const advisory = useMemo(() => {
@@ -1529,7 +1659,7 @@ export default function MindShift360() {
         {shown.map((c, i) => (
           <div key={i} className="mb-3 slide-up" style={{ animationDelay: `${i * 0.05}s` }}>
             <div className="flex gap-3">
-              <UserAvatar user={c.user} size="sm" />
+              {UserAvatar({ user: c.user, size: "sm" })}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-white text-sm font-medium">{c.user.name}</span>
@@ -1551,7 +1681,7 @@ export default function MindShift360() {
                   <div className="mt-2 ml-2 pl-3 border-l border-gray-800 space-y-2">
                     {c.replies.map((r, j) => (
                       <div key={j} className="flex gap-2">
-                        <UserAvatar user={r.user} size="sm" />
+                        {UserAvatar({ user: r.user, size: "sm" })}
                         <div>
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-white text-xs font-medium">{r.user.name}</span>
@@ -1614,10 +1744,10 @@ export default function MindShift360() {
   };
 
   // ── FEED CARD ──
-  const FeedCard = ({ post }) => {
+  const FeedCard = (post) => {
     const isAI = post.type !== "community_wisdom";
     return (
-      <div className="card feed-card p-5 mb-4 fade-in">
+      <div key={post.id} className="card feed-card p-5 mb-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -1626,7 +1756,7 @@ export default function MindShift360() {
                 <Bot size={18} className="text-white" />
               </div>
             ) : (
-              <UserAvatar user={post.user} />
+              UserAvatar({ user: post.user })
             )}
             <div>
               <div className="flex items-center gap-2">
@@ -1750,11 +1880,11 @@ export default function MindShift360() {
         )}
 
         {/* Poll */}
-        {post.poll && <PollWidget postId={post.id} poll={post.poll} />}
+        {post.poll && PollWidget({ postId: post.id, poll: post.poll })}
 
         {/* Reactions */}
         <div className="mt-3 flex items-center justify-between">
-          <ReactionBar postId={post.id} reactions={post.reactions} />
+          {ReactionBar({ postId: post.id, reactions: post.reactions })}
           <button
             onClick={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
             className="text-gray-500 text-xs hover:text-gray-300 transition-colors flex items-center gap-1"
@@ -1764,7 +1894,7 @@ export default function MindShift360() {
         </div>
 
         {/* Comments */}
-        <CommentSection postId={post.id} comments={post.comments} />
+        {CommentSection({ postId: post.id, comments: post.comments })}
       </div>
     );
   };
@@ -1773,6 +1903,8 @@ export default function MindShift360() {
 
   const FeedPage = () => {
     const allPosts = [...communityPosts, ...FEED_POSTS];
+    const allianceReach = allAlliances.reduce((total, alliance) => total + (Number(alliance.members) || 0), 0);
+    const risingMindsets = MINDSET_CLUSTERS.filter((cluster) => cluster.winning).length;
     return (
       <div>
         <div className="card p-4 mb-4 overflow-hidden relative">
@@ -1801,6 +1933,80 @@ export default function MindShift360() {
             >
               {profile ? "Open Live Activity" : "Join Before Next Drop"}
             </button>
+          </div>
+        </div>
+
+        <div className="card p-5 mb-4 overflow-hidden relative">
+          <div className="absolute inset-0 shimmer opacity-20 pointer-events-none" />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={14} className="text-emerald-400" />
+              <span className="text-emerald-400 text-xs font-semibold uppercase tracking-wider">Rewire Thesis</span>
+              <span className="text-gray-600 text-xs ml-auto">Old platforms are attention loops</span>
+            </div>
+            <h2 className="text-white text-lg font-bold mb-2 leading-snug">
+              AI is empowering individuals. Nucleus-level self-sustained communities are next.
+            </h2>
+            <p className="text-gray-300 text-sm leading-relaxed mb-3">
+              Rewire combines intelligence, physical infrastructure, and programmable ownership so communities can operate
+              food, water, energy, and logistics as autonomous alliances.
+            </p>
+
+            <div className="grid gap-2 mb-3 md:grid-cols-3">
+              {REWIRE_STACK.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.id} className="rounded-xl bg-gray-900/55 border border-gray-800 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Icon size={13} className="text-emerald-400" />
+                      <span className="text-white text-xs font-semibold">{item.title}</span>
+                    </div>
+                    <p className="text-gray-400 text-xs leading-relaxed">{item.detail}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="grid gap-2 mb-3 md:grid-cols-2">
+              {NUCLEUS_SYSTEMS.map((system) => (
+                <div key={system.id} className="rounded-xl bg-blue-950/10 border border-blue-500/15 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-base">{system.emoji}</span>
+                    <span className="text-blue-300 text-xs font-semibold">{system.label}</span>
+                  </div>
+                  <p className="text-gray-400 text-xs">{system.detail}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+              <span className="px-2.5 py-1 rounded-lg text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                {allianceReach.toLocaleString()} alliance members active
+              </span>
+              <span className="px-2.5 py-1 rounded-lg text-xs bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                {risingMindsets} cross-border mindsets compounding
+              </span>
+              <span className="px-2.5 py-1 rounded-lg text-xs bg-yellow-500/10 text-yellow-300 border border-yellow-500/20">
+                {livePresence.activeCountries} countries coordinating in real time
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setTab("world")}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm font-medium rounded-xl hover:from-emerald-500 hover:to-blue-500 transition-all"
+              >
+                View Nucleus Alliances
+              </button>
+              {!profile && (
+                <button
+                  onClick={() => setShowOnboard(true)}
+                  className="px-4 py-2 bg-gray-800 text-gray-300 text-sm rounded-xl hover:bg-gray-700 transition-all"
+                >
+                  Join Rewire
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1859,9 +2065,7 @@ export default function MindShift360() {
           </div>
         )}
 
-        {allPosts.map((post) => (
-          <FeedCard key={post.id} post={post} />
-        ))}
+        {allPosts.map((post) => FeedCard(post))}
       </div>
     );
   };
@@ -2280,11 +2484,6 @@ export default function MindShift360() {
   ];
 
   const WealthShiftStrip = () => {
-    const [shiftIdx, setShiftIdx] = useState(0);
-    useEffect(() => {
-      const t = setInterval(() => setShiftIdx((p) => (p + 1) % LIVE_SHIFTS.length), 5000);
-      return () => clearInterval(t);
-    }, []);
     const s = LIVE_SHIFTS[shiftIdx];
     return (
       <div
@@ -2351,85 +2550,6 @@ export default function MindShift360() {
   };
 
   const WorldSimPage = () => {
-    const [mapLayer, setMapLayer] = useState("geo"); // geo | mindset | dissolve
-    const [selectedCluster, setSelectedCluster] = useState(null);
-    const [selectedAlliance, setSelectedAlliance] = useState(null);
-    const [showCreateAlliance, setShowCreateAlliance] = useState(false);
-    const [joinedAlliances, setJoinedAlliances] = useState(new Set());
-    const [allianceComment, setAllianceComment] = useState("");
-    const [newAlliance, setNewAlliance] = useState({
-      name: "",
-      worldVision: "",
-      philosophy: "",
-      commitments: ["", "", ""],
-    });
-    const [userAlliances, setUserAlliances] = useState([]);
-    const [routineStep, setRoutineStep] = useState(-1);
-    const [routineAnswers, setRoutineAnswers] = useState({});
-    const [showResults, setShowResults] = useState(false);
-
-    const totalQi = useMemo(() => Object.values(routineAnswers).reduce((a, b) => a + b, 0), [routineAnswers]);
-    const maxQi = ROUTINE_QUESTIONS.reduce((a, q) => a + Math.max(...q.options.map((o) => o.qi)), 0);
-
-    const answerQuestion = (qi) => {
-      const qId = ROUTINE_QUESTIONS[routineStep].id;
-      setRoutineAnswers((prev) => ({ ...prev, [qId]: qi }));
-      if (routineStep < ROUTINE_QUESTIONS.length - 1) setRoutineStep(routineStep + 1);
-      else setShowResults(true);
-    };
-
-    const qiLevel =
-      totalQi >= 100
-        ? { label: "APEX PREDATOR", emoji: "🦅", color: "#10b981", desc: "You're built for the new world. Top 2%." }
-        : totalQi >= 70
-          ? {
-              label: "RISING FORCE",
-              emoji: "🚀",
-              color: "#3b82f6",
-              desc: "Strong foundation. A few upgrades and you're untouchable.",
-            }
-          : totalQi >= 40
-            ? {
-                label: "SLEEPING GIANT",
-                emoji: "⏰",
-                color: "#f59e0b",
-                desc: "Potential wasted. The world rewards action, not potential.",
-              }
-            : {
-                label: "RED ALERT",
-                emoji: "🚨",
-                color: "#ef4444",
-                desc: "Your routine is optimized for a world that no longer exists.",
-              };
-
-    const allAlliances = [...SEED_ALLIANCES, ...userAlliances];
-
-    const handleCreateAlliance = () => {
-      if (!newAlliance.name.trim() || !newAlliance.worldVision.trim()) return;
-      const a = {
-        id: `user_${Date.now()}`,
-        name: newAlliance.name,
-        emoji: "🌟",
-        founder: {
-          name: profile?.name || "Anonymous",
-          avatar: AVATARS[(profile?.name?.length || 3) % AVATARS.length],
-          handle: `@${(profile?.name || "anon").toLowerCase().replace(/\s/g, "_")}`,
-        },
-        members: 1,
-        founded: "just now",
-        worldVision: newAlliance.worldVision,
-        commitments: newAlliance.commitments.filter((c) => c.trim()),
-        philosophy: newAlliance.philosophy,
-        discussion: [],
-        tags: [],
-        mindsets: ["builders"],
-      };
-      setUserAlliances((prev) => [a, ...prev]);
-      setShowCreateAlliance(false);
-      setNewAlliance({ name: "", worldVision: "", philosophy: "", commitments: ["", "", ""] });
-      setSelectedAlliance(a.id);
-    };
-
     return (
       <div className="space-y-0">
         <div className="card p-5 mb-4 relative overflow-hidden">
@@ -2720,7 +2840,7 @@ export default function MindShift360() {
             </svg>
           </div>
 
-          <WealthShiftStrip />
+          {WealthShiftStrip()}
 
           {selectedCluster &&
             mapLayer === "geo" &&
@@ -2813,7 +2933,7 @@ export default function MindShift360() {
             })()}
         </div>
 
-        <LiveActivityTicker />
+        {LiveActivityTicker()}
 
         <div className="card p-5 mb-4">
           <div className="flex items-center justify-between mb-3">
@@ -3181,7 +3301,7 @@ export default function MindShift360() {
   ];
 
   const currentPage =
-    tab === "feed" ? <FeedPage /> : tab === "world" ? <WorldSimPage /> : tab === "paradigm" ? <ParadigmPage /> : <MyProfilePage />;
+    tab === "feed" ? FeedPage() : tab === "world" ? WorldSimPage() : tab === "paradigm" ? ParadigmPage() : MyProfilePage();
 
   return (
     <div className="h-screen bg-gray-950 text-white flex flex-col overflow-hidden">
@@ -3243,7 +3363,7 @@ export default function MindShift360() {
         </div>
       </nav>
 
-      {showOnboard && <OnboardModal />}
+      {showOnboard && OnboardModal()}
     </div>
   );
 }
