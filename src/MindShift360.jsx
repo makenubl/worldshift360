@@ -974,6 +974,57 @@ const CHALLENGES = [
   "Climate Damage",
 ];
 
+const LIVE_ACTIONS = [
+  "joined alliance",
+  "posted insight on",
+  "reacted to",
+  "commented on",
+  "voted in poll",
+  "started discussion",
+];
+
+const LIVE_TARGETS = [
+  "AI Job Disruption",
+  "Future of Money",
+  "Water Crisis Thread",
+  "Global Solar Army",
+  "Digital Democracy Shift",
+  "Gig Economy Blueprint",
+  "Currency Trends",
+  "Builders Without Borders",
+];
+
+const LIVE_REGIONS = ["Lagos", "Karachi", "Nairobi", "Berlin", "Jakarta", "Toronto", "Dubai", "Sao Paulo"];
+
+const randomItem = (items) => items[Math.floor(Math.random() * items.length)];
+const randomRange = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+
+const createLiveEvent = (ageSec = 0) => {
+  const knownUser = Math.random() > 0.35;
+  const user = knownUser
+    ? randomItem(USER_PROFILES)
+    : {
+        name: randomItem(["Aria Khan", "Leo Mendes", "Zain Qureshi", "Mina Noor", "Kofi Mensah", "Sana Ali"]),
+        avatar: randomItem(AVATARS),
+      };
+
+  return {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name: user.name,
+    avatar: user.avatar,
+    action: randomItem(LIVE_ACTIONS),
+    target: randomItem(LIVE_TARGETS),
+    location: randomItem(LIVE_REGIONS),
+    ageSec,
+  };
+};
+
+const formatActivityAge = (ageSec) => {
+  if (ageSec < 8) return "just now";
+  if (ageSec < 60) return `${ageSec}s ago`;
+  return `${Math.floor(ageSec / 60)}m ago`;
+};
+
 // ── ISOLATED CLOCK ──
 const LiveClock = ({ className }) => {
   const [t, setT] = useState(new Date());
@@ -1038,6 +1089,52 @@ export default function MindShift360() {
     interactions: 2847291,
     accuracy: 78.2,
   });
+  const [livePresence, setLivePresence] = useState({
+    onlineNow: 12384,
+    joiningPerMin: 71,
+    postsPerMin: 164,
+    activeCountries: 142,
+  });
+  const [fomoStats, setFomoStats] = useState({
+    nextDropInMin: 13,
+    seatsLeft: 58,
+  });
+  const [liveEvents, setLiveEvents] = useState(() =>
+    [0, 6, 14, 25, 39, 52].map((age) => createLiveEvent(age)),
+  );
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNetworkStats((stats) => ({
+        ...stats,
+        minds: stats.minds + randomRange(0, 3),
+        interactions: stats.interactions + randomRange(11, 47),
+        accuracy: Math.min(99, stats.accuracy + 0.0007),
+      }));
+
+      setLivePresence((presence) => ({
+        onlineNow: Math.max(10000, presence.onlineNow + randomRange(-18, 26)),
+        joiningPerMin: Math.max(25, presence.joiningPerMin + randomRange(-4, 6)),
+        postsPerMin: Math.max(80, presence.postsPerMin + randomRange(-8, 12)),
+        activeCountries: Math.max(120, Math.min(190, presence.activeCountries + randomRange(-1, 1))),
+      }));
+
+      setFomoStats((stats) => {
+        const resetWindow = stats.nextDropInMin <= 1;
+        return {
+          nextDropInMin: resetWindow ? randomRange(12, 20) : stats.nextDropInMin - 1,
+          seatsLeft: resetWindow ? randomRange(40, 85) : Math.max(7, stats.seatsLeft - (Math.random() > 0.45 ? 1 : 0)),
+        };
+      });
+
+      setLiveEvents((events) => {
+        const aged = events.map((event) => ({ ...event, ageSec: event.ageSec + 4 }));
+        return [createLiveEvent(0), ...aged].slice(0, 8);
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const toggleReaction = useCallback((postId, key) => {
     setUserReactions((prev) => {
@@ -1538,6 +1635,35 @@ export default function MindShift360() {
     const allPosts = [...communityPosts, ...FEED_POSTS];
     return (
       <div>
+        <div className="card p-4 mb-4 overflow-hidden relative">
+          <div className="absolute inset-0 shimmer opacity-30 pointer-events-none" />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 pulse-soft" />
+              <span className="text-emerald-400 text-xs font-semibold uppercase tracking-wider">Live Now</span>
+              <span className="text-gray-600 text-xs ml-auto">{livePresence.activeCountries} countries active</span>
+            </div>
+            <p className="text-white text-sm leading-relaxed mb-3">
+              {livePresence.onlineNow.toLocaleString()} minds are online right now. {livePresence.joiningPerMin}/min are joining and {livePresence.postsPerMin}/min are posting.
+              {profile ? " You are in the room while momentum is compounding." : " If you stay out, you miss the network effects as they happen."}
+            </p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <span className="px-2.5 py-1 rounded-lg text-xs bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                Next global insight drop in {fomoStats.nextDropInMin}m
+              </span>
+              <span className="px-2.5 py-1 rounded-lg text-xs bg-red-500/10 text-red-300 border border-red-500/20">
+                {fomoStats.seatsLeft} seats left in live room
+              </span>
+            </div>
+            <button
+              onClick={() => (profile ? setTab("world") : setShowOnboard(true))}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm font-medium rounded-xl hover:from-emerald-500 hover:to-blue-500 transition-all"
+            >
+              {profile ? "Open Live Activity" : "Join Before Next Drop"}
+            </button>
+          </div>
+        </div>
+
         {/* Compose */}
         {profile && (
           <div className="card p-4 mb-4">
@@ -2048,28 +2174,7 @@ export default function MindShift360() {
     );
   };
 
-  const ACTIVITY_ITEMS = [
-    { avatar: "👩‍💻", name: "Aisha Malik", action: "commented on", target: "AI Call Center Scenario", time: "just now" },
-    { avatar: "🧑‍🎓", name: "Hafiz Abdullah", action: "joined alliance", target: "Digital Ummah", time: "12s ago" },
-    { avatar: "👨‍🌾", name: "Muhammad Iqbal", action: "voted in poll", target: "Future of Money", time: "28s ago" },
-    { avatar: "👩‍⚕️", name: "Dr. Fatima", action: "created topic", target: "Mental Health in Tech", time: "45s ago" },
-    { avatar: "🎖️", name: "Brig. Khalid", action: "replied to", target: "Defense AI Thread", time: "1m ago" },
-    { avatar: "👩‍🏫", name: "Prof. Zainab", action: "started alliance", target: "Education Reboot 2030", time: "2m ago" },
-    { avatar: "👷", name: "Hamza Baloch", action: "shared insight on", target: "Global Infrastructure", time: "3m ago" },
-    { avatar: "👩‍💼", name: "Sara Ahmed", action: "reacted 🔥 to", target: "Fintech Revolution Post", time: "3m ago" },
-  ];
-
   const LiveActivityTicker = () => {
-    const [actIdx, setActIdx] = useState(0);
-    useEffect(() => {
-      const t = setInterval(() => setActIdx((p) => (p + 1) % ACTIVITY_ITEMS.length), 3500);
-      return () => clearInterval(t);
-    }, []);
-    const items = [
-      ACTIVITY_ITEMS[actIdx],
-      ACTIVITY_ITEMS[(actIdx + 1) % ACTIVITY_ITEMS.length],
-      ACTIVITY_ITEMS[(actIdx + 2) % ACTIVITY_ITEMS.length],
-    ];
     return (
       <div
         className="p-3 rounded-xl mb-4"
@@ -2077,15 +2182,15 @@ export default function MindShift360() {
       >
         <div className="flex items-center gap-2 mb-2">
           <div className="w-1.5 h-1.5 rounded-full bg-blue-500 pulse-soft" />
-          <span className="text-gray-600 text-xs font-bold uppercase tracking-wider">Activity</span>
+          <span className="text-gray-600 text-xs font-bold uppercase tracking-wider">Global Activity</span>
           <span className="text-gray-700 text-xs ml-auto font-mono">
             {networkStats.interactions.toLocaleString()} interactions
           </span>
         </div>
         <div className="space-y-1.5">
-          {items.map((item, i) => (
+          {liveEvents.slice(0, 4).map((item, i) => (
             <div
-              key={`${actIdx}-${i}`}
+              key={item.id}
               className="ticker-item flex items-center gap-2"
               style={{ animationDelay: `${i * 0.1}s`, opacity: 1 - i * 0.2 }}
             >
@@ -2094,7 +2199,7 @@ export default function MindShift360() {
                 <span className="text-white font-medium">{item.name}</span> {item.action}{" "}
                 <span className="text-emerald-400">{item.target}</span>
               </span>
-              <span className="text-gray-700 text-xs flex-shrink-0 ml-auto">{item.time}</span>
+              <span className="text-gray-700 text-xs flex-shrink-0 ml-auto">{formatActivityAge(item.ageSec)}</span>
             </div>
           ))}
         </div>
@@ -2955,7 +3060,7 @@ export default function MindShift360() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-soft" />
-              <span className="font-mono">{networkStats.minds.toLocaleString()}</span>
+              <span className="font-mono">{livePresence.onlineNow.toLocaleString()} online</span>
             </div>
             {profile ? (
               <div
@@ -3005,6 +3110,8 @@ export default function MindShift360() {
             </h3>
             <div className="space-y-2.5">
               {[
+                { label: "Online Now", value: livePresence.onlineNow.toLocaleString(), color: "#22c55e" },
+                { label: "Joining / min", value: livePresence.joiningPerMin.toLocaleString(), color: "#f59e0b" },
                 { label: "Connected Minds", value: networkStats.minds.toLocaleString(), color: "#10b981" },
                 { label: "Total Interactions", value: networkStats.interactions.toLocaleString(), color: "#3b82f6" },
                 { label: "Prediction Accuracy", value: `${networkStats.accuracy.toFixed(1)}%`, color: "#8b5cf6" },
