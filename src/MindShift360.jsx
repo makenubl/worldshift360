@@ -3091,7 +3091,6 @@ export default function MindShift360() {
                       <p className="text-gray-500 text-xs mt-0.5">New coordination layer for the AI world</p>
                     </div>
                   </div>
-                  <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-2">New coordination layer for the AI world</p>
                   <h2 className="text-2xl md:text-4xl font-black leading-[1.05] mb-4">
                     <span className="block">You wanted to create a better world</span>
                     <span className="block text-gradient-multi mt-1">now you can.</span>
