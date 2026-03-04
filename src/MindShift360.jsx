@@ -518,6 +518,12 @@ const NUCLEUS_SYSTEMS = [
   { id: "logistics", emoji: "📦", label: "Logistics Loop", detail: "Shared fleets, routing, and fulfillment" },
 ];
 
+const JOULE = {
+  name: "Joule",
+  ticker: "JOU",
+  thesis: "Intelligence + compute + hardware execution",
+};
+
 const STRATEGY_COMPETITIONS = [
   {
     id: "arena_food_water",
@@ -1403,6 +1409,7 @@ export default function MindShift360() {
   const [apiConnected, setApiConnected] = useState(false);
   const [shiftIdx, setShiftIdx] = useState(0);
   const [mapLayer, setMapLayer] = useState("geo");
+  const [showWorldContext, setShowWorldContext] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [selectedAlliance, setSelectedAlliance] = useState(null);
   const [showCreateAlliance, setShowCreateAlliance] = useState(false);
@@ -2501,7 +2508,7 @@ export default function MindShift360() {
               <span className="text-gray-600 text-xs ml-auto">{activeTakeovers} takeover races active</span>
             </div>
             <h2 className="text-white text-lg font-bold mb-2 leading-snug">
-              <span className="block">Fund winning strategies with decentralized currency.</span>
+              <span className="block">Fund winning strategies with {JOULE.name}.</span>
               <span className="block text-blue-300 mt-0.5">Winning alliances gain control over real resources.</span>
             </h2>
             <p className="text-gray-300 text-sm leading-relaxed mb-3">
@@ -2549,7 +2556,7 @@ export default function MindShift360() {
 
             <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-3 mb-3">
               <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                Decentralized Currency Flow (USDC rails)
+                {JOULE.name} Flow ({JOULE.thesis} rails)
               </p>
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="px-2 py-1 rounded-lg bg-gray-800 text-gray-200">
@@ -2577,7 +2584,7 @@ export default function MindShift360() {
             <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-3 mb-3">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Contribution Size</span>
-                <span className="text-emerald-300 text-xs font-mono ml-auto">{allocationAmount} USDC per strategy vote</span>
+                <span className="text-emerald-300 text-xs font-mono ml-auto">{allocationAmount} {JOULE.ticker} per strategy vote</span>
               </div>
               <input
                 type="range"
@@ -2610,7 +2617,7 @@ export default function MindShift360() {
                         <p className="text-gray-500 text-xs">Competing for {battle.controlAsset}</p>
                       </div>
                       <span className="px-2 py-0.5 rounded-lg text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                        {battle.dailyFlow.toFixed(1)}M USDC/day
+                        {battle.dailyFlow.toFixed(1)}M {JOULE.ticker}/day
                       </span>
                     </div>
 
@@ -3231,9 +3238,161 @@ export default function MindShift360() {
   };
 
   const WorldSimPage = () => {
+    const activeTakeovers = strategyLeaders.filter((leader) => leader.takeoverActive).length;
+
     return (
       <div className="space-y-0">
-        <div className="card p-5 mb-4 relative overflow-hidden">
+        <div className="card p-5 mb-4 overflow-hidden relative" style={{ borderColor: "rgba(59,130,246,0.3)" }}>
+          <div className="absolute inset-0 shimmer opacity-15 pointer-events-none" />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <Network size={14} className="text-blue-400" />
+              <span className="text-blue-300 text-xs font-semibold uppercase tracking-wider">World Strategy Arena</span>
+              <span className="text-gray-600 text-xs ml-auto">{activeTakeovers} active takeover races</span>
+            </div>
+
+            <h2 className="text-white text-lg font-bold mb-2 leading-snug">
+              <span className="block">Compete as strategies, not just countries.</span>
+              <span className="block text-blue-300 mt-0.5">Winning alliances direct real resource execution.</span>
+            </h2>
+
+            <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-3 mb-3">
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                Live {JOULE.name} Flow ({JOULE.thesis} rails)
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <div className="rounded-lg bg-gray-900/70 border border-gray-800 px-2 py-1.5">
+                  <p className="text-gray-500 text-[11px]">Treasury</p>
+                  <p className="text-white text-xs font-mono">{treasuryFlow.treasuryLocked.toFixed(2)}M</p>
+                </div>
+                <div className="rounded-lg bg-blue-950/20 border border-blue-500/20 px-2 py-1.5">
+                  <p className="text-blue-300 text-[11px]">Escrow</p>
+                  <p className="text-white text-xs font-mono">{treasuryFlow.missionEscrow.toFixed(2)}M</p>
+                </div>
+                <div className="rounded-lg bg-emerald-950/20 border border-emerald-500/20 px-2 py-1.5">
+                  <p className="text-emerald-300 text-[11px]">Ops</p>
+                  <p className="text-white text-xs font-mono">{treasuryFlow.resourceOps.toFixed(2)}M</p>
+                </div>
+                <div className="rounded-lg bg-purple-950/20 border border-purple-500/20 px-2 py-1.5">
+                  <p className="text-purple-300 text-[11px]">Rewards</p>
+                  <p className="text-white text-xs font-mono">{treasuryFlow.builderRewards.toFixed(2)}M</p>
+                </div>
+                <div className="rounded-lg bg-yellow-950/20 border border-yellow-500/20 px-2 py-1.5">
+                  <p className="text-yellow-300 text-[11px]">Reserve</p>
+                  <p className="text-white text-xs font-mono">{treasuryFlow.strategicReserve.toFixed(2)}M</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-3 mb-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Allocation</span>
+                <span className="text-emerald-300 text-xs font-mono ml-auto">{allocationAmount} {JOULE.ticker} / support action</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={500}
+                step={10}
+                value={allocationAmount}
+                onChange={(event) => setAllocationAmount(Number(event.target.value))}
+                className="w-full accent-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-3 mb-3">
+              {strategyBattles.map((battle) => {
+                const winRateA = battle.winRateA;
+                const winRateB = Number((100 - winRateA).toFixed(1));
+                const leaderIsA = winRateA >= 50;
+                const leader = leaderIsA ? battle.sideA : battle.sideB;
+                const loser = leaderIsA ? battle.sideB : battle.sideA;
+                const leaderWinRate = leaderIsA ? winRateA : winRateB;
+                const controlShiftActive = leaderWinRate >= 60;
+                const support = strategySupport[battle.id];
+                const leaderReasons = leaderIsA ? battle.sideA.whyWinning : battle.sideB.whyWinning;
+
+                return (
+                  <div key={battle.id} className="rounded-xl border border-gray-800 bg-gray-900/35 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                      <div>
+                        <p className="text-white text-sm font-semibold">{battle.resource}</p>
+                        <p className="text-gray-500 text-xs">{battle.controlAsset}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-lg text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                        {battle.dailyFlow.toFixed(1)}M {JOULE.ticker}/day
+                      </span>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-2 mb-2">
+                      <button
+                        onClick={() => supportStrategy(battle, "a")}
+                        className={`text-left rounded-xl p-3 border transition-all ${support === "a" ? "border-emerald-400 bg-emerald-950/20" : "border-gray-800 bg-gray-900/50 hover:border-emerald-500/40"}`}
+                      >
+                        <p className="text-white text-xs font-semibold">{battle.sideA.name}</p>
+                        <p className="text-gray-400 text-xs mt-1">{battle.sideA.strategy}</p>
+                        <p className="text-emerald-300 text-xs font-mono mt-1">Treasury {battle.sideA.treasury.toFixed(2)}M</p>
+                      </button>
+                      <button
+                        onClick={() => supportStrategy(battle, "b")}
+                        className={`text-left rounded-xl p-3 border transition-all ${support === "b" ? "border-blue-400 bg-blue-950/20" : "border-gray-800 bg-gray-900/50 hover:border-blue-500/40"}`}
+                      >
+                        <p className="text-white text-xs font-semibold">{battle.sideB.name}</p>
+                        <p className="text-gray-400 text-xs mt-1">{battle.sideB.strategy}</p>
+                        <p className="text-blue-300 text-xs font-mono mt-1">Treasury {battle.sideB.treasury.toFixed(2)}M</p>
+                      </button>
+                    </div>
+
+                    <div className="rounded-xl bg-black/20 border border-gray-800 p-2.5 mb-2">
+                      <div className="flex items-center justify-between text-[11px] mb-1">
+                        <span className="text-emerald-300">{battle.sideA.name}: {winRateA.toFixed(1)}%</span>
+                        <span className="text-blue-300">{battle.sideB.name}: {winRateB.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-gray-800 overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 transition-all" style={{ width: `${winRateA}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-2">
+                      <div className="rounded-lg p-2 bg-emerald-950/15 border border-emerald-500/20">
+                        <p className="text-emerald-300 text-[11px] font-semibold uppercase tracking-wider mb-1">Why it leads</p>
+                        {leaderReasons.slice(0, 2).map((reason, index) => (
+                          <p key={index} className="text-gray-300 text-xs">• {reason}</p>
+                        ))}
+                      </div>
+                      <div className="rounded-lg p-2 bg-blue-950/15 border border-blue-500/20">
+                        <p className="text-blue-300 text-[11px] font-semibold uppercase tracking-wider mb-1">Control outcome</p>
+                        <p className="text-gray-300 text-xs">
+                          {controlShiftActive
+                            ? `${leader.name} is absorbing execution control from ${loser.name}.`
+                            : `${leader.name} is ahead. Reach 60% to trigger governance transfer.`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowWorldContext((prev) => !prev)}
+                className="px-4 py-2 bg-gray-800 text-gray-200 text-sm rounded-xl hover:bg-gray-700 transition-all"
+              >
+                {showWorldContext ? "Hide World Context" : "Show World Context Map"}
+              </button>
+              <button
+                onClick={() => (profile ? setTab("feed") : setShowOnboard(true))}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm rounded-xl hover:from-emerald-500 hover:to-blue-500 transition-all"
+              >
+                {profile ? "Go To Feed Missions" : "Join Rewire"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {showWorldContext && (
+          <div className="card p-5 mb-4 relative overflow-hidden">
           <div
             className="absolute inset-0 opacity-30"
             style={{ background: "radial-gradient(ellipse at 50% 40%, rgba(16,185,129,0.06) 0%, transparent 60%)" }}
@@ -3242,7 +3401,7 @@ export default function MindShift360() {
           {/* Layer Switcher */}
           <div className="relative mb-4">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-white font-bold text-base relative">How the World is Grouped</h2>
+              <h2 className="text-white font-bold text-base relative">World Context (Secondary)</h2>
               <div className="flex gap-1">
                 {[
                   ["geo", "🌍 Geography"],
@@ -3613,6 +3772,7 @@ export default function MindShift360() {
               );
             })()}
         </div>
+        )}
 
         {LiveActivityTicker()}
 
