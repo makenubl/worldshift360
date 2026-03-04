@@ -44,6 +44,7 @@ import {
   XCircle,
   Compass,
   Image,
+  LogOut,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════
@@ -2059,6 +2060,41 @@ export default function MindShift360() {
     setOtpIssuedFor("");
     setOtpDebugCode("");
     setOtpMessage("");
+  }, []);
+
+  const handleSignOut = useCallback(() => {
+    if (typeof window !== "undefined") {
+      try {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith("rewire_")) localStorage.removeItem(key);
+        });
+      } catch {}
+    }
+
+    setProfile(null);
+    setShowOnboard(false);
+    setShowLanding(true);
+    setLandingPhotoOnly(false);
+    setLandingAuthMode("login");
+    setOtpStatus("idle");
+    setOtpInput("");
+    setOtpSessionToken("");
+    setOtpIssuedFor("");
+    setOtpDebugCode("");
+    setOtpMessage("");
+    setForm({
+      name: "",
+      email: "",
+      dob: "",
+      age: 25,
+      province: "",
+      sector: "",
+      education: "",
+      income: "",
+      type: "",
+      challenges: [],
+    });
+    setTab("world");
   }, []);
 
   useEffect(() => {
@@ -5476,11 +5512,21 @@ export default function MindShift360() {
               </div>
             )}
             {profile ? (
-              <div
-                className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-sm cursor-pointer hover:ring-2 hover:ring-emerald-500/30 transition-all"
-                onClick={() => setTab("profile")}
-              >
-                {AVATARS[(profile.name?.length || 0) % AVATARS.length]}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSignOut}
+                  className="px-2 py-1.5 rounded-lg border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-all text-xs flex items-center gap-1.5"
+                  title="Sign out"
+                >
+                  <LogOut size={12} />
+                  <span className="hidden sm:inline">Sign out</span>
+                </button>
+                <div
+                  className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-sm cursor-pointer hover:ring-2 hover:ring-emerald-500/30 transition-all"
+                  onClick={() => setTab("profile")}
+                >
+                  {AVATARS[(profile.name?.length || 0) % AVATARS.length]}
+                </div>
               </div>
             ) : (
               <button
