@@ -1337,6 +1337,29 @@ const calculateAgeFromDob = (dobValue) => {
   return Math.max(0, age);
 };
 
+const sanitizeLoadedProfile = (profile) => {
+  if (!profile || typeof profile !== "object") return profile;
+  const looksLikeLegacyAutofill =
+    profile.email &&
+    profile.dob &&
+    profile.province === "North America" &&
+    profile.sector === "Technology/IT" &&
+    profile.type === "civilian";
+
+  if (profile.profileTier !== "basic" && !looksLikeLegacyAutofill) return profile;
+
+  return {
+    ...profile,
+    profileTier: "basic",
+    province: "",
+    sector: "",
+    type: "",
+    education: "",
+    income: "",
+    challenges: Array.isArray(profile.challenges) ? profile.challenges : [],
+  };
+};
+
 const createMissionInviteCode = (title = "wire") => {
   const slug = title.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 4) || "MSN";
   const nonce = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -1478,11 +1501,11 @@ export default function MindShift360() {
     email: "",
     dob: "",
     age: 25,
-    province: "North America",
-    sector: "Technology/IT",
-    education: "bachelors",
-    income: "50k_100k",
-    type: "civilian",
+    province: "",
+    sector: "",
+    education: "",
+    income: "",
+    type: "",
     challenges: [],
   });
   const [otpInput, setOtpInput] = useState("");
@@ -1687,7 +1710,7 @@ export default function MindShift360() {
       const savedStrategySupport = localStorage.getItem("rewire_strategy_support");
       const savedAllocationAmount = localStorage.getItem("rewire_allocation_amount");
 
-      if (savedProfile) setProfile(JSON.parse(savedProfile));
+      if (savedProfile) setProfile(sanitizeLoadedProfile(JSON.parse(savedProfile)));
       if (savedJoinedAlliances) setJoinedAlliances(new Set(JSON.parse(savedJoinedAlliances)));
       if (savedUserAlliances) setUserAlliances(JSON.parse(savedUserAlliances));
       if (savedMissionState) setMissionState(JSON.parse(savedMissionState));
@@ -1957,11 +1980,17 @@ export default function MindShift360() {
     if (!cleanName || !form.dob || !isValidEmail(cleanEmail) || otpStatus !== "verified") return;
 
     const normalizedProfile = {
-      ...form,
       name: cleanName,
       email: cleanEmail,
+      dob: form.dob,
       age: calculateAgeFromDob(form.dob),
       profileTier: "basic",
+      province: "",
+      sector: "",
+      education: "",
+      income: "",
+      type: "",
+      challenges: [],
     };
 
     setProfile(normalizedProfile);
@@ -3517,9 +3546,8 @@ export default function MindShift360() {
             <div>
               <h2 className="text-white text-lg font-bold">{profile.name}</h2>
               <div className="flex items-center gap-2 mt-1">
-                <Badge text={profile.sector?.split("/")[0]} color="blue" />
-                <Badge text={profile.province} color="gray" />
-                <Badge text={profile.type} color={profile.type === "military" ? "red" : "green"} />
+                {profile.email && <Badge text={profile.email} color="gray" />}
+                {profile.dob && <Badge text={new Date(profile.dob).toLocaleDateString("en-US")} color="blue" />}
               </div>
             </div>
             <div className="text-center">
