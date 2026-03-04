@@ -2370,8 +2370,8 @@ export default function MindShift360() {
             </div>
 
             <h2 className="text-white text-xl md:text-2xl font-black leading-tight mb-2">
-              Old social platforms capture attention.
-              <span className="text-gradient-multi"> Rewire coordinates action.</span>
+              <span className="block">Old social platforms capture attention.</span>
+              <span className="block text-gradient-multi mt-0.5">Rewire coordinates action.</span>
             </h2>
             <p className="text-blue-100/80 text-sm mb-3 max-w-3xl">
               Individuals now have AI leverage. The next step is local nucleus communities with practical systems for food,
@@ -2501,7 +2501,8 @@ export default function MindShift360() {
               <span className="text-gray-600 text-xs ml-auto">{activeTakeovers} takeover races active</span>
             </div>
             <h2 className="text-white text-lg font-bold mb-2 leading-snug">
-              Join a strategy, fund it with decentralized currency, and win control over real resources.
+              <span className="block">Fund winning strategies with decentralized currency.</span>
+              <span className="block text-blue-300 mt-0.5">Winning alliances gain control over real resources.</span>
             </h2>
             <p className="text-gray-300 text-sm leading-relaxed mb-3">
               Practical value: if your strategy wins, your alliance gets leadership over weaker models and governs resource
