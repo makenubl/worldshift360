@@ -107,56 +107,67 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
   const smtpSecure = process.env.SMTP_SECURE === "true";
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
+  const smtpConfigured =
+    (gmailUser && gmailAppPassword) || (smtpHost && smtpUser && smtpPass && Number.isFinite(smtpPort));
+
+  const subject = "Your Rewire OTP code";
+  const html = `
+    <div style="font-family: Inter, Arial, sans-serif; padding: 20px; color: #111827;">
+      <h2 style="margin: 0 0 12px; color: #111827;">Rewire Verification Code</h2>
+      <p style="margin: 0 0 12px;">Hi ${name || "there"},</p>
+      <p style="margin: 0 0 14px;">Use this one-time code to verify your Rewire account:</p>
+      <div style="font-size: 28px; letter-spacing: 6px; font-weight: 700; margin: 8px 0 14px; color: #0f766e;">${otp}</div>
+      <p style="margin: 0; color: #4b5563;">This code expires in 10 minutes.</p>
+    </div>
+  `;
+  const text = `Rewire OTP: ${otp}\nThis code expires in 10 minutes.`;
+
+  const sendViaSmtp = async () => {
+    if (!smtpConfigured) {
+      return { ok: false, message: "SMTP email provider is not configured." };
+    }
+
+    try {
+      const nodemailer = (await import("nodemailer")).default;
+      const transport = gmailUser
+        ? nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: gmailUser,
+              pass: gmailAppPassword,
+            },
+          })
+        : nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpSecure,
+            auth: {
+              user: smtpUser,
+              pass: smtpPass,
+            },
+          });
+
+      const senderEmail = gmailUser ? `${fromName} <${gmailUser}>` : fromEmail || smtpUser;
+      await transport.sendMail({
+        from: senderEmail,
+        to: email,
+        subject,
+        text,
+        html,
+      });
+
+      return { ok: true, message: `OTP sent to ${email}.` };
+    } catch (error) {
+      return {
+        ok: false,
+        message: `Failed to deliver OTP email: ${error?.message || "SMTP error"}`,
+      };
+    }
+  };
 
   if (!resendApiKey || !fromEmail) {
-    const smtpConfigured =
-      (gmailUser && gmailAppPassword) || (smtpHost && smtpUser && smtpPass && Number.isFinite(smtpPort));
-
     if (smtpConfigured) {
-      try {
-        const nodemailer = (await import("nodemailer")).default;
-        const transport = gmailUser
-          ? nodemailer.createTransport({
-              service: "gmail",
-              auth: {
-                user: gmailUser,
-                pass: gmailAppPassword,
-              },
-            })
-          : nodemailer.createTransport({
-              host: smtpHost,
-              port: smtpPort,
-              secure: smtpSecure,
-              auth: {
-                user: smtpUser,
-                pass: smtpPass,
-              },
-            });
-
-        const senderEmail = fromEmail || (gmailUser ? `${fromName} <${gmailUser}>` : smtpUser);
-        await transport.sendMail({
-          from: senderEmail,
-          to: email,
-          subject: "Your Rewire OTP code",
-          text: `Rewire OTP: ${otp}\nThis code expires in 10 minutes.`,
-          html: `
-            <div style="font-family: Inter, Arial, sans-serif; padding: 20px; color: #111827;">
-              <h2 style="margin: 0 0 12px; color: #111827;">Rewire Verification Code</h2>
-              <p style="margin: 0 0 12px;">Hi ${name || "there"},</p>
-              <p style="margin: 0 0 14px;">Use this one-time code to verify your Rewire account:</p>
-              <div style="font-size: 28px; letter-spacing: 6px; font-weight: 700; margin: 8px 0 14px; color: #0f766e;">${otp}</div>
-              <p style="margin: 0; color: #4b5563;">This code expires in 10 minutes.</p>
-            </div>
-          `,
-        });
-
-        return { ok: true, message: `OTP sent to ${email}.` };
-      } catch (error) {
-        return {
-          ok: false,
-          message: `Failed to deliver OTP email: ${error?.message || "SMTP error"}`,
-        };
-      }
+      return sendViaSmtp();
     }
 
     if (!isProduction()) {
@@ -174,17 +185,6 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
   }
 
   const from = fromEmail.includes("<") ? fromEmail : `${fromName} <${fromEmail}>`;
-  const subject = "Your Rewire OTP code";
-  const html = `
-    <div style="font-family: Inter, Arial, sans-serif; padding: 20px; color: #111827;">
-      <h2 style="margin: 0 0 12px; color: #111827;">Rewire Verification Code</h2>
-      <p style="margin: 0 0 12px;">Hi ${name || "there"},</p>
-      <p style="margin: 0 0 14px;">Use this one-time code to verify your Rewire account:</p>
-      <div style="font-size: 28px; letter-spacing: 6px; font-weight: 700; margin: 8px 0 14px; color: #0f766e;">${otp}</div>
-      <p style="margin: 0; color: #4b5563;">This code expires in 10 minutes.</p>
-    </div>
-  `;
-  const text = `Rewire OTP: ${otp}\nThis code expires in 10 minutes.`;
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -203,6 +203,18 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
 
   if (!response.ok) {
     const details = await response.text().catch(() => "");
+    if (smtpConfigured) {
+      const smtpResult = await sendViaSmtp();
+      if (smtpResult.ok) {
+        return { ok: true, message: `OTP sent to ${email}.` };
+      }
+      return {
+        ok: false,
+        message: details
+          ? `Failed to deliver OTP email: ${details}. SMTP fallback failed: ${smtpResult.message}`
+          : `Failed to deliver OTP email. SMTP fallback failed: ${smtpResult.message}`,
+      };
+    }
     return {
       ok: false,
       message: details ? `Failed to deliver OTP email: ${details}` : "Failed to deliver OTP email.",
