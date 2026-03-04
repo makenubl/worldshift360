@@ -1323,6 +1323,20 @@ const formatActivityAge = (ageSec) => {
   return `${Math.floor(ageSec / 60)}m ago`;
 };
 
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || "").trim());
+
+const calculateAgeFromDob = (dobValue) => {
+  if (!dobValue) return 25;
+  const birthDate = new Date(dobValue);
+  if (Number.isNaN(birthDate.getTime())) return 25;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  const birthdayPassed = monthDiff > 0 || (monthDiff === 0 && today.getDate() >= birthDate.getDate());
+  if (!birthdayPassed) age -= 1;
+  return Math.max(0, age);
+};
+
 const createMissionInviteCode = (title = "wire") => {
   const slug = title.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 4) || "MSN";
   const nonce = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -1461,6 +1475,8 @@ export default function MindShift360() {
   const [userComments, setUserComments] = useState({});
   const [form, setForm] = useState({
     name: "",
+    email: "",
+    dob: "",
     age: 25,
     province: "North America",
     sector: "Technology/IT",
@@ -1469,6 +1485,11 @@ export default function MindShift360() {
     type: "civilian",
     challenges: [],
   });
+  const [otpInput, setOtpInput] = useState("");
+  const [otpGenerated, setOtpGenerated] = useState("");
+  const [otpRequestedEmail, setOtpRequestedEmail] = useState("");
+  const [otpStatus, setOtpStatus] = useState("idle");
+  const [otpMessage, setOtpMessage] = useState("");
 
   // Network stats that grow
   const [networkStats, setNetworkStats] = useState({
@@ -1846,11 +1867,73 @@ export default function MindShift360() {
     setNewPostText("");
   }, [newPostText, profile]);
 
+  const requestOtp = useCallback(() => {
+    const cleanName = form.name.trim();
+    const cleanEmail = form.email.trim().toLowerCase();
+    const ageFromDob = calculateAgeFromDob(form.dob);
+
+    if (!cleanName || !form.dob || !isValidEmail(cleanEmail)) {
+      setOtpStatus("error");
+      setOtpMessage("Enter valid name, date of birth, and email first.");
+      return;
+    }
+    if (ageFromDob < 13) {
+      setOtpStatus("error");
+      setOtpMessage("Account creation requires age 13 or above.");
+      return;
+    }
+
+    const code = String(randomRange(100000, 999999));
+    setOtpGenerated(code);
+    setOtpRequestedEmail(cleanEmail);
+    setOtpInput("");
+    setOtpStatus("sent");
+    setOtpMessage(`OTP sent to ${cleanEmail}. Demo mode code: ${code}`);
+  }, [form.dob, form.email, form.name]);
+
+  const verifyOtp = useCallback(() => {
+    const cleanEmail = form.email.trim().toLowerCase();
+    if (!otpGenerated || otpStatus === "idle") {
+      setOtpStatus("error");
+      setOtpMessage("Request OTP first.");
+      return;
+    }
+    if (cleanEmail !== otpRequestedEmail) {
+      setOtpStatus("error");
+      setOtpMessage("Email changed after OTP request. Request a new OTP.");
+      return;
+    }
+    if (otpInput.trim() === otpGenerated) {
+      setOtpStatus("verified");
+      setOtpMessage("Email verified. You can create your Rewire account now.");
+      return;
+    }
+    setOtpStatus("error");
+    setOtpMessage("Invalid OTP. Try again.");
+  }, [form.email, otpGenerated, otpInput, otpRequestedEmail, otpStatus]);
+
   const handleOnboard = useCallback(() => {
-    setProfile(form);
+    const cleanName = form.name.trim();
+    const cleanEmail = form.email.trim().toLowerCase();
+    if (!cleanName || !form.dob || !isValidEmail(cleanEmail) || otpStatus !== "verified") return;
+
+    const normalizedProfile = {
+      ...form,
+      name: cleanName,
+      email: cleanEmail,
+      age: calculateAgeFromDob(form.dob),
+      profileTier: "basic",
+    };
+
+    setProfile(normalizedProfile);
     setShowOnboard(false);
+    setOtpStatus("idle");
+    setOtpInput("");
+    setOtpGenerated("");
+    setOtpRequestedEmail("");
+    setOtpMessage("");
     setNetworkStats((s) => ({ ...s, minds: s.minds + 1 }));
-  }, [form]);
+  }, [form, otpStatus]);
 
   const totalQi = useMemo(() => Object.values(routineAnswers).reduce((sum, value) => sum + value, 0), [routineAnswers]);
   const maxQi = useMemo(
@@ -1942,6 +2025,27 @@ export default function MindShift360() {
     setWalletJoules((current) => current + STARTER_JOULE_GRANT);
     setStarterGrantIssued(true);
   }, [hydrated, profile, starterGrantIssued]);
+
+  useEffect(() => {
+    if (showOnboard) return;
+    setOtpStatus("idle");
+    setOtpInput("");
+    setOtpGenerated("");
+    setOtpRequestedEmail("");
+    setOtpMessage("");
+  }, [showOnboard]);
+
+  useEffect(() => {
+    if (otpStatus === "idle") return;
+    const currentEmail = form.email.trim().toLowerCase();
+    if (!currentEmail || (otpRequestedEmail && currentEmail !== otpRequestedEmail)) {
+      setOtpStatus("idle");
+      setOtpInput("");
+      setOtpGenerated("");
+      setOtpRequestedEmail("");
+      setOtpMessage("");
+    }
+  }, [form.email, otpRequestedEmail, otpStatus]);
 
   const answerQuestion = useCallback(
     (qi) => {
@@ -3473,11 +3577,8 @@ export default function MindShift360() {
   // ── ONBOARDING MODAL ──
   const OnboardModal = () => {
     const u = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-    const tc = (c) =>
-      setForm((f) => ({
-        ...f,
-        challenges: f.challenges.includes(c) ? f.challenges.filter((x) => x !== c) : [...f.challenges, c],
-      }));
+    const canSendOtp = Boolean(form.name.trim() && form.dob && isValidEmail(form.email));
+    const canCreateAccount = canSendOtp && otpStatus === "verified";
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -3487,9 +3588,9 @@ export default function MindShift360() {
           className="card w-full max-w-lg max-h-[85vh] overflow-y-auto scrollbar-thin p-6 pop-in"
           style={{ background: "rgba(17,24,39,0.95)" }}
         >
-          <h2 className="text-white text-xl font-bold mb-1">Join the Collective 🌍</h2>
+          <h2 className="text-white text-xl font-bold mb-1">Create Rewire Account</h2>
           <p className="text-gray-400 text-sm mb-5">
-            Your profile makes the intelligence smarter for everyone. New members receive {STARTER_JOULE_GRANT} {JOULE.ticker} starter balance.
+            Simple start: name, date of birth, and email OTP. New members receive {STARTER_JOULE_GRANT} {JOULE.ticker}. Advanced profile details can be added later.
           </p>
           <div className="space-y-3">
             <div>
@@ -3501,115 +3602,63 @@ export default function MindShift360() {
                 placeholder="Your name"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-gray-500 text-xs mb-1 block">Age</label>
+            <div>
+              <label className="text-gray-500 text-xs mb-1 block">Date of Birth</label>
+              <input
+                type="date"
+                max={new Date().toISOString().split("T")[0]}
+                className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
+                value={form.dob || ""}
+                onChange={(e) => u("dob", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-gray-500 text-xs mb-1 block">Email</label>
+              <div className="flex gap-2">
                 <input
-                  type="number"
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
-                  value={form.age}
-                  onChange={(e) => u("age", parseInt(e.target.value) || 25)}
+                  type="email"
+                  className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
+                  value={form.email || ""}
+                  onChange={(e) => u("email", e.target.value)}
+                  placeholder="you@email.com"
                 />
-              </div>
-              <div>
-                <label className="text-gray-500 text-xs mb-1 block">Region</label>
-                <select
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
-                  value={form.province}
-                  onChange={(e) => u("province", e.target.value)}
-                >
-                  {REGIONS.map((p) => (
-                    <option key={p} value={p} className="bg-gray-900">
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="text-gray-500 text-xs mb-1 block">Sector</label>
-              <select
-                className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
-                value={form.sector}
-                onChange={(e) => u("sector", e.target.value)}
-              >
-                {SECTORS.map((s) => (
-                  <option key={s} value={s} className="bg-gray-900">
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {["civilian", "military", "paramilitary"].map((t) => (
                 <button
-                  key={t}
-                  onClick={() => u("type", t)}
-                  className={`py-2 rounded-xl text-sm transition-all ${form.type === t ? "bg-emerald-600 text-white" : "bg-gray-900 text-gray-500 border border-gray-800 hover:border-gray-700"}`}
+                  onClick={requestOtp}
+                  disabled={!canSendOtp}
+                  className="px-3 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs font-medium rounded-xl transition-all"
                 >
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                  {otpStatus === "sent" || otpStatus === "verified" ? "Resend OTP" : "Send OTP"}
                 </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-gray-500 text-xs mb-1 block">Education</label>
-                <select
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
-                  value={form.education}
-                  onChange={(e) => u("education", e.target.value)}
-                >
-                  {[
-                    ["none", "None"],
-                    ["primary", "Primary"],
-                    ["matric", "Matric"],
-                    ["inter", "Intermediate"],
-                    ["bachelors", "Bachelors"],
-                    ["masters", "Masters"],
-                    ["phd", "PhD"],
-                    ["technical", "Technical"],
-                  ].map(([v, l]) => (
-                    <option key={v} value={v} className="bg-gray-900">
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-gray-500 text-xs mb-1 block">Income Level</label>
-                <select
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
-                  value={form.income}
-                  onChange={(e) => u("income", e.target.value)}
-                >
-                  {[
-                    ["below_25k", "Low"],
-                    ["25k_50k", "Below Average"],
-                    ["50k_100k", "Average"],
-                    ["100k_200k", "Above Average"],
-                    ["above_200k", "High"],
-                  ].map(([v, l]) => (
-                    <option key={v} value={v} className="bg-gray-900">
-                      {l}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
-            <div>
-              <label className="text-gray-500 text-xs mb-1.5 block">Your Challenges</label>
-              <div className="flex flex-wrap gap-1.5">
-                {CHALLENGES.map((c) => (
+            {(otpStatus === "sent" || otpStatus === "verified" || otpStatus === "error") && (
+              <div>
+                <label className="text-gray-500 text-xs mb-1 block">Email OTP</label>
+                <div className="flex gap-2">
+                  <input
+                    inputMode="numeric"
+                    maxLength={6}
+                    className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
+                    value={otpInput}
+                    onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="Enter 6-digit OTP"
+                  />
                   <button
-                    key={c}
-                    onClick={() => tc(c)}
-                    className={`px-2.5 py-1 rounded-lg text-xs transition-all ${form.challenges.includes(c) ? "bg-red-500/15 text-red-400 border border-red-500/20" : "bg-gray-900 text-gray-600 border border-gray-800 hover:text-gray-400"}`}
+                    onClick={verifyOtp}
+                    disabled={otpInput.trim().length !== 6}
+                    className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs font-medium rounded-xl transition-all"
                   >
-                    {c}
+                    Verify
                   </button>
-                ))}
+                </div>
+                {otpMessage && (
+                  <p className={`mt-1 text-xs ${otpStatus === "verified" ? "text-emerald-400" : otpStatus === "error" ? "text-red-400" : "text-blue-300"}`}>
+                    {otpMessage}
+                  </p>
+                )}
+                <p className="text-gray-600 text-[11px] mt-1">Work in progress: OTP delivery is in demo mode right now.</p>
               </div>
-            </div>
+            )}
           </div>
           <div className="flex gap-3 mt-5">
             <button
@@ -3620,10 +3669,10 @@ export default function MindShift360() {
             </button>
             <button
               onClick={handleOnboard}
-              disabled={!form.name.trim()}
+              disabled={!canCreateAccount}
               className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl text-sm hover:from-emerald-500 hover:to-blue-500 disabled:opacity-40 transition-all"
             >
-              Join + Claim {STARTER_JOULE_GRANT} {JOULE.ticker}
+              Create Account + Claim {STARTER_JOULE_GRANT} {JOULE.ticker}
             </button>
           </div>
         </div>
