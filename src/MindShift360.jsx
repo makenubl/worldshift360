@@ -1486,8 +1486,9 @@ export default function MindShift360() {
     challenges: [],
   });
   const [otpInput, setOtpInput] = useState("");
-  const [otpGenerated, setOtpGenerated] = useState("");
-  const [otpRequestedEmail, setOtpRequestedEmail] = useState("");
+  const [otpSessionToken, setOtpSessionToken] = useState("");
+  const [otpIssuedFor, setOtpIssuedFor] = useState("");
+  const [otpDebugCode, setOtpDebugCode] = useState("");
   const [otpStatus, setOtpStatus] = useState("idle");
   const [otpMessage, setOtpMessage] = useState("");
 
@@ -1867,7 +1868,7 @@ export default function MindShift360() {
     setNewPostText("");
   }, [newPostText, profile]);
 
-  const requestOtp = useCallback(() => {
+  const requestOtp = useCallback(async () => {
     const cleanName = form.name.trim();
     const cleanEmail = form.email.trim().toLowerCase();
     const ageFromDob = calculateAgeFromDob(form.dob);
@@ -1883,34 +1884,72 @@ export default function MindShift360() {
       return;
     }
 
-    const code = String(randomRange(100000, 999999));
-    setOtpGenerated(code);
-    setOtpRequestedEmail(cleanEmail);
+    setOtpStatus("sending");
+    setOtpMessage("Sending OTP...");
+    setOtpDebugCode("");
+
+    try {
+      const response = await fetch("/api/auth/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: cleanName, email: cleanEmail, dob: form.dob }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.ok) {
+        setOtpStatus("error");
+        setOtpMessage(data?.message || "Failed to send OTP. Please try again.");
+        return;
+      }
+
+      setOtpSessionToken(data.sessionToken || "");
+      setOtpIssuedFor(cleanEmail);
+      setOtpDebugCode(data.debugCode || "");
+      setOtpStatus("sent");
+      setOtpMessage(data.message || `OTP sent to ${cleanEmail}.`);
+    } catch {
+      setOtpStatus("error");
+      setOtpMessage("OTP request failed. Check connection and try again.");
+    }
+
     setOtpInput("");
-    setOtpStatus("sent");
-    setOtpMessage(`OTP sent to ${cleanEmail}. Demo mode code: ${code}`);
   }, [form.dob, form.email, form.name]);
 
-  const verifyOtp = useCallback(() => {
+  const verifyOtp = useCallback(async () => {
     const cleanEmail = form.email.trim().toLowerCase();
-    if (!otpGenerated || otpStatus === "idle") {
+    if (!otpSessionToken || otpStatus === "idle") {
       setOtpStatus("error");
       setOtpMessage("Request OTP first.");
       return;
     }
-    if (cleanEmail !== otpRequestedEmail) {
+    if (cleanEmail !== otpIssuedFor) {
       setOtpStatus("error");
       setOtpMessage("Email changed after OTP request. Request a new OTP.");
       return;
     }
-    if (otpInput.trim() === otpGenerated) {
+
+    setOtpStatus("verifying");
+    setOtpMessage("Verifying OTP...");
+
+    try {
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, otp: otpInput.trim(), sessionToken: otpSessionToken }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.ok) {
+        setOtpStatus("error");
+        setOtpMessage(data?.message || "Invalid OTP. Try again.");
+        return;
+      }
       setOtpStatus("verified");
-      setOtpMessage("Email verified. You can create your Rewire account now.");
+      setOtpMessage(data.message || "Email verified. You can create your Rewire account now.");
       return;
+    } catch {
+      setOtpStatus("error");
+      setOtpMessage("OTP verification failed. Try again.");
     }
-    setOtpStatus("error");
-    setOtpMessage("Invalid OTP. Try again.");
-  }, [form.email, otpGenerated, otpInput, otpRequestedEmail, otpStatus]);
+  }, [form.email, otpInput, otpIssuedFor, otpSessionToken, otpStatus]);
 
   const handleOnboard = useCallback(() => {
     const cleanName = form.name.trim();
@@ -1929,8 +1968,9 @@ export default function MindShift360() {
     setShowOnboard(false);
     setOtpStatus("idle");
     setOtpInput("");
-    setOtpGenerated("");
-    setOtpRequestedEmail("");
+    setOtpSessionToken("");
+    setOtpIssuedFor("");
+    setOtpDebugCode("");
     setOtpMessage("");
     setNetworkStats((s) => ({ ...s, minds: s.minds + 1 }));
   }, [form, otpStatus]);
@@ -2030,22 +2070,24 @@ export default function MindShift360() {
     if (showOnboard) return;
     setOtpStatus("idle");
     setOtpInput("");
-    setOtpGenerated("");
-    setOtpRequestedEmail("");
+    setOtpSessionToken("");
+    setOtpIssuedFor("");
+    setOtpDebugCode("");
     setOtpMessage("");
   }, [showOnboard]);
 
   useEffect(() => {
     if (otpStatus === "idle") return;
     const currentEmail = form.email.trim().toLowerCase();
-    if (!currentEmail || (otpRequestedEmail && currentEmail !== otpRequestedEmail)) {
+    if (!currentEmail || (otpIssuedFor && currentEmail !== otpIssuedFor)) {
       setOtpStatus("idle");
       setOtpInput("");
-      setOtpGenerated("");
-      setOtpRequestedEmail("");
+      setOtpSessionToken("");
+      setOtpIssuedFor("");
+      setOtpDebugCode("");
       setOtpMessage("");
     }
-  }, [form.email, otpRequestedEmail, otpStatus]);
+  }, [form.email, otpIssuedFor, otpStatus]);
 
   const answerQuestion = useCallback(
     (qi) => {
@@ -3578,6 +3620,7 @@ export default function MindShift360() {
   const OnboardModal = () => {
     const u = (k, v) => setForm((f) => ({ ...f, [k]: v }));
     const canSendOtp = Boolean(form.name.trim() && form.dob && isValidEmail(form.email));
+    const otpBusy = otpStatus === "sending" || otpStatus === "verifying";
     const canCreateAccount = canSendOtp && otpStatus === "verified";
     return (
       <div
@@ -3624,14 +3667,14 @@ export default function MindShift360() {
                 />
                 <button
                   onClick={requestOtp}
-                  disabled={!canSendOtp}
+                  disabled={!canSendOtp || otpBusy}
                   className="px-3 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs font-medium rounded-xl transition-all"
                 >
-                  {otpStatus === "sent" || otpStatus === "verified" ? "Resend OTP" : "Send OTP"}
+                  {otpStatus === "sending" ? "Sending..." : otpStatus === "sent" || otpStatus === "verified" ? "Resend OTP" : "Send OTP"}
                 </button>
               </div>
             </div>
-            {(otpStatus === "sent" || otpStatus === "verified" || otpStatus === "error") && (
+            {(otpStatus === "sent" || otpStatus === "verified" || otpStatus === "error" || otpStatus === "verifying") && (
               <div>
                 <label className="text-gray-500 text-xs mb-1 block">Email OTP</label>
                 <div className="flex gap-2">
@@ -3645,10 +3688,10 @@ export default function MindShift360() {
                   />
                   <button
                     onClick={verifyOtp}
-                    disabled={otpInput.trim().length !== 6}
+                    disabled={otpInput.trim().length !== 6 || otpBusy}
                     className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs font-medium rounded-xl transition-all"
                   >
-                    Verify
+                    {otpStatus === "verifying" ? "Verifying..." : "Verify"}
                   </button>
                 </div>
                 {otpMessage && (
@@ -3656,7 +3699,10 @@ export default function MindShift360() {
                     {otpMessage}
                   </p>
                 )}
-                <p className="text-gray-600 text-[11px] mt-1">Work in progress: OTP delivery is in demo mode right now.</p>
+                <p className="text-gray-600 text-[11px] mt-1">Check inbox/spam. OTP expires in 10 minutes.</p>
+                {otpDebugCode && (
+                  <p className="text-yellow-300 text-[11px] mt-1">Dev OTP (local fallback): {otpDebugCode}</p>
+                )}
               </div>
             )}
           </div>
