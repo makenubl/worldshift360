@@ -2029,7 +2029,6 @@ export default function MindShift360() {
   const handleLandingWatchLive = useCallback(() => {
     setShowLanding(false);
     setTab(profile ? "feed" : "world");
-    if (!profile) setShowOnboard(true);
   }, [profile]);
 
   useEffect(() => {
@@ -5257,7 +5256,7 @@ export default function MindShift360() {
 
       <header className="flex-shrink-0 border-b border-gray-800/50 bg-gray-950/90" style={{ backdropFilter: "blur(12px)" }}>
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <button className="flex items-center gap-2.5" onClick={() => setTab("feed")}>
+          <button className="flex items-center gap-2.5" onClick={() => setTab(profile ? "feed" : "world")}>
             <img
               src="/rewire-logo-192.png"
               alt="Rewire logo"
