@@ -43,7 +43,6 @@ import {
   CheckCircle2,
   XCircle,
   Compass,
-  Flag,
   Image,
 } from "lucide-react";
 
@@ -4308,15 +4307,17 @@ export default function MindShift360() {
 
       <header className="flex-shrink-0 border-b border-gray-800/50 bg-gray-950/90" style={{ backdropFilter: "blur(12px)" }}>
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
-              <Flag size={14} className="text-white" />
-            </div>
+          <button className="flex items-center gap-2.5" onClick={() => setTab("feed")}>
+            <img
+              src="/rewire-logo-192.png"
+              alt="Rewire logo"
+              className="w-8 h-8 rounded-full object-cover ring-1 ring-blue-400/40 shadow-[0_0_18px_rgba(96,165,250,0.45)]"
+            />
             <div>
               <h1 className="text-sm font-bold text-white leading-none">Rewire</h1>
               <span className="text-gray-600 text-xs leading-none">Collective Intelligence</span>
             </div>
-          </div>
+          </button>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-soft" />
@@ -4341,6 +4342,21 @@ export default function MindShift360() {
         </div>
       </header>
 
+      <div className="flex-shrink-0 border-b border-gray-800/50 bg-gray-950/85" style={{ backdropFilter: "blur(12px)" }}>
+        <div className="max-w-3xl mx-auto px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-thin">
+          {tabs.map((t) => (
+            <button
+              key={`quick-${t.id}`}
+              onClick={() => setTab(t.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all flex items-center gap-1.5 ${tab === t.id ? "bg-emerald-600 text-white" : "bg-gray-900 text-gray-400 hover:text-white border border-gray-800"}`}
+            >
+              <t.icon size={13} />
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex-1 overflow-hidden flex">
         <main className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="max-w-2xl mx-auto px-4 py-4">{currentPage}</div>
@@ -4356,7 +4372,7 @@ export default function MindShift360() {
               className={`flex-1 py-3 flex flex-col items-center gap-1 transition-all ${tab === t.id ? "text-emerald-400" : "text-gray-600 hover:text-gray-400"}`}
             >
               <t.icon size={20} />
-              <span className="text-xs">{t.label}</span>
+              <span className="text-xs">{t.id === "world" ? "Arena" : t.label}</span>
             </button>
           ))}
         </div>
