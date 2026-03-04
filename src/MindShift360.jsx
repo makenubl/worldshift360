@@ -3088,7 +3088,6 @@ export default function MindShift360() {
                     />
                     <div>
                       <h1 className="text-base font-bold leading-none">Rewire</h1>
-                      <p className="text-gray-500 text-xs mt-0.5">Work in progress • coordination layer</p>
                     </div>
                   </div>
                   <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-2">New coordination layer for the AI world</p>
@@ -3096,15 +3095,28 @@ export default function MindShift360() {
                     <span className="block">You wanted to create a better world</span>
                     <span className="block text-gradient-multi mt-1">now you can.</span>
                   </h2>
-                  <p className="text-gray-200 text-sm md:text-base leading-relaxed max-w-2xl mb-4">
-                    AI gives individuals intelligence, compute, and automation. Rewire is where people coordinate outcomes:
-                    create wires, recruit teams, execute missions, and settle value through {JOULE.ticker}.
-                  </p>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-3.5 max-w-2xl">
+                    <p className="text-gray-200 text-sm md:text-base leading-relaxed mb-2.5">
+                      AI gives individuals intelligence, compute, and automation. Rewire helps first-time users coordinate
+                      real outcomes in one clear flow:
+                    </p>
+                    <div className="space-y-1.5">
+                      {[
+                        `Create a wire with a clear mission`,
+                        "Recruit people who can execute",
+                        "Run milestones and submit proof",
+                        `Settle rewards and value in ${JOULE.ticker}`,
+                      ].map((item, index) => (
+                        <div key={item} className="flex items-start gap-2 text-xs text-gray-200">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[10px] mt-0.5">
+                            {index + 1}
+                          </span>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xl md:text-2xl font-bold leading-tight">
-                  <span className="block">Old social platforms capture attention.</span>
-                  <span className="block text-emerald-300">Rewire coordinates action.</span>
-                </p>
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-gray-950/70 p-4 sm:p-5 md:p-6">
