@@ -2051,26 +2051,15 @@ export default function MindShift360() {
     setNetworkStats((s) => ({ ...s, minds: s.minds + 1 }));
   }, [form, otpStatus, profile]);
 
-  const handleLandingCreateWire = useCallback(() => {
-    setLandingPhotoOnly(false);
-    setShowLanding(false);
-    setTab("world");
-    setShowMissionBuilder(true);
-    if (!profile) setShowOnboard(true);
-  }, [profile]);
-
-  const handleLandingJoinWires = useCallback(() => {
-    setLandingPhotoOnly(false);
-    setShowLanding(false);
-    setTab("world");
-    if (!profile) setShowOnboard(true);
-  }, [profile]);
-
-  const handleLandingWatchLive = useCallback(() => {
-    setLandingPhotoOnly(false);
-    setShowLanding(false);
-    setTab(profile ? "feed" : "world");
-  }, [profile]);
+  const switchLandingAuthMode = useCallback((mode) => {
+    setLandingAuthMode(mode === "login" ? "login" : "signup");
+    setOtpStatus("idle");
+    setOtpInput("");
+    setOtpSessionToken("");
+    setOtpIssuedFor("");
+    setOtpDebugCode("");
+    setOtpMessage("");
+  }, []);
 
   useEffect(() => {
     if (!profile && tab === "feed") {
@@ -3201,29 +3190,34 @@ export default function MindShift360() {
                 <div className="rounded-2xl border border-white/10 bg-gray-950/55 backdrop-blur-sm p-4 sm:p-5 md:p-6">
                   <div className="flex gap-2 mb-4">
                     <button
-                      onClick={() => setLandingAuthMode("signup")}
+                      onClick={() => switchLandingAuthMode("signup")}
                       className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${isSignup ? "bg-emerald-600 text-white" : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"}`}
                     >
                       Sign Up
                     </button>
                     <button
-                      onClick={() => setLandingAuthMode("login")}
+                      onClick={() => switchLandingAuthMode("login")}
                       className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${!isSignup ? "bg-blue-600 text-white" : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"}`}
                     >
                       Login
                     </button>
                   </div>
+                  <p className="text-[11px] text-gray-500 mb-3">
+                    {isSignup ? "Create account: name + date of birth + email OTP." : "Login: email OTP only."}
+                  </p>
 
                   <div className="space-y-3">
-                    <div>
-                      <label className="text-gray-500 text-xs mb-1 block">Name {isSignup ? "*" : "(optional)"}</label>
-                      <input
-                        value={form.name}
-                        onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                        placeholder="Your name"
-                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
-                      />
-                    </div>
+                    {isSignup && (
+                      <div>
+                        <label className="text-gray-500 text-xs mb-1 block">Name *</label>
+                        <input
+                          value={form.name}
+                          onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                          placeholder="Your name"
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                        />
+                      </div>
+                    )}
                     <div>
                       <label className="text-gray-500 text-xs mb-1 block">Email</label>
                       <input
@@ -3234,16 +3228,18 @@ export default function MindShift360() {
                         className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
                       />
                     </div>
-                    <div>
-                      <label className="text-gray-500 text-xs mb-1 block">Date of Birth {isSignup ? "*" : "(optional)"}</label>
-                      <input
-                        type="date"
-                        max={new Date().toISOString().split("T")[0]}
-                        value={form.dob || ""}
-                        onChange={(event) => setForm((prev) => ({ ...prev, dob: event.target.value }))}
-                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
-                      />
-                    </div>
+                    {isSignup && (
+                      <div>
+                        <label className="text-gray-500 text-xs mb-1 block">Date of Birth *</label>
+                        <input
+                          type="date"
+                          max={new Date().toISOString().split("T")[0]}
+                          value={form.dob || ""}
+                          onChange={(event) => setForm((prev) => ({ ...prev, dob: event.target.value }))}
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
+                        />
+                      </div>
+                    )}
                     <button
                       onClick={() => requestOtp(isSignup ? "signup" : "login")}
                       disabled={!canSendOtp || otpBusy}
@@ -3251,7 +3247,7 @@ export default function MindShift360() {
                     >
                       {otpStatus === "sending" ? "Sending OTP..." : otpStatus === "sent" || otpStatus === "verified" ? "Resend OTP" : "Send OTP"}
                     </button>
-                    {!isSignup && <p className="text-gray-600 text-[11px] -mt-1">Login requires email + OTP. Name and DOB are optional.</p>}
+                    {!isSignup && <p className="text-gray-600 text-[11px] -mt-1">Login requires email + OTP.</p>}
 
                     {(otpStatus === "sent" || otpStatus === "verified" || otpStatus === "error" || otpStatus === "verifying") && (
                       <div>
@@ -3288,21 +3284,6 @@ export default function MindShift360() {
                     >
                       {isSignup ? `Sign Up + Claim ${STARTER_JOULE_GRANT} ${JOULE.ticker}` : "Login to Rewire"}
                     </button>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={handleLandingCreateWire}
-                        className="py-2 border border-white/15 rounded-xl text-xs text-white hover:bg-white/5 transition-all"
-                      >
-                        Create Wire
-                      </button>
-                      <button
-                        onClick={handleLandingJoinWires}
-                        className="py-2 border border-white/15 rounded-xl text-xs text-white hover:bg-white/5 transition-all"
-                      >
-                        Join Wires
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>
