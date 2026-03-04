@@ -3088,7 +3088,7 @@ export default function MindShift360() {
                     />
                     <div>
                       <h1 className="text-base font-bold leading-none">Rewire</h1>
-                      <p className="text-gray-500 text-xs mt-0.5">Work in progress • coordination layer</p>
+                      <p className="text-gray-500 text-xs mt-0.5">New coordination layer for the AI world</p>
                     </div>
                   </div>
                   <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-2">New coordination layer for the AI world</p>
