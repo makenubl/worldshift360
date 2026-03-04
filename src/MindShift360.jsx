@@ -1573,6 +1573,7 @@ export default function MindShift360() {
   const [missionCommentInputs, setMissionCommentInputs] = useState({});
   const [userMissions, setUserMissions] = useState([]);
   const [showMissionBuilder, setShowMissionBuilder] = useState(false);
+  const [missionWizardStep, setMissionWizardStep] = useState(0);
   const [missionDraft, setMissionDraft] = useState({
     title: "",
     summary: "",
@@ -2067,6 +2068,7 @@ export default function MindShift360() {
       setShowOnboard(true);
       return;
     }
+    setMissionWizardStep(0);
     setShowMissionBuilder(true);
     setTab("world");
   }, [profile]);
@@ -2306,6 +2308,10 @@ export default function MindShift360() {
     });
   }, []);
 
+  const appendMissionDraftDeliverable = useCallback(() => {
+    setMissionDraft((draft) => ({ ...draft, deliverables: [...draft.deliverables, ""] }));
+  }, []);
+
   const handleCreateMission = useCallback(() => {
     if (!profile) {
       setShowOnboard(true);
@@ -2388,6 +2394,7 @@ export default function MindShift360() {
       allianceId: missionDraft.allianceId || "a5",
     });
     setShowMissionBuilder(false);
+    setMissionWizardStep(0);
     setLastInviteCode(inviteCode);
     setInviteCodeInput(inviteCode);
     setNetworkStats((stats) => ({ ...stats, interactions: stats.interactions + 2, accuracy: Math.min(99, stats.accuracy + 0.002) }));
@@ -2561,6 +2568,50 @@ export default function MindShift360() {
       canLaunch: checks.every((item) => item.ok),
     };
   }, [missionDraft, walletJoules]);
+
+  const missionWizardSteps = useMemo(() => {
+    const hasOutcome =
+      missionDraft.title.trim().length >= 6 &&
+      missionDraft.summary.trim().length >= 24 &&
+      missionDraft.successMetric.trim().length >= 8;
+    const hasExecution = missionDraftChecklist.deliverablesCount >= 2 && Boolean(missionDraft.allianceId);
+    const hasEconomics = Number(missionDraft.deadlineDays) > 0 && missionDraftChecklist.rewardJou >= MIN_MISSION_REWARD_JOU;
+
+    return [
+      {
+        id: "outcome",
+        title: "Outcome",
+        purpose: "Define the real-world problem and measurable result so the wire aligns fast.",
+        ready: hasOutcome,
+      },
+      {
+        id: "execution",
+        title: "Execution Plan",
+        purpose: "Set your alliance and concrete checkpoints contributors can execute.",
+        ready: hasExecution,
+      },
+      {
+        id: "economics",
+        title: "Economics",
+        purpose: "Set timeline + reward pool so contributors understand urgency and payout.",
+        ready: hasEconomics,
+      },
+      {
+        id: "launch",
+        title: "Launch",
+        purpose: "Review launch readiness, lock escrow, and generate invite code.",
+        ready: missionDraftChecklist.canLaunch,
+      },
+    ];
+  }, [missionDraft, missionDraftChecklist]);
+
+  const currentMissionWizardStep = missionWizardSteps[missionWizardStep] || missionWizardSteps[0];
+  const missionWizardCanAdvance = currentMissionWizardStep?.ready || false;
+  const missionWizardProgress = ((missionWizardStep + 1) / missionWizardSteps.length) * 100;
+  const selectedDraftAlliance = useMemo(
+    () => allAlliances.find((alliance) => alliance.id === missionDraft.allianceId),
+    [allAlliances, missionDraft.allianceId],
+  );
 
   const supportStrategy = useCallback(
     (battle, sideKey) => {
@@ -4969,7 +5020,14 @@ export default function MindShift360() {
               <div className="flex items-center justify-between gap-2">
                 <p className="text-gray-300 text-xs font-semibold uppercase tracking-wider">Create Wire</p>
                 <button
-                  onClick={() => setShowMissionBuilder((prev) => !prev)}
+                  onClick={() => {
+                    if (showMissionBuilder) {
+                      setShowMissionBuilder(false);
+                      return;
+                    }
+                    setMissionWizardStep(0);
+                    setShowMissionBuilder(true);
+                  }}
                   className="px-2.5 py-1 rounded-lg text-xs bg-emerald-600 hover:bg-emerald-500 text-white transition-all"
                 >
                   {showMissionBuilder ? "Hide Builder" : "Open Wire Builder"}
@@ -4977,115 +5035,227 @@ export default function MindShift360() {
               </div>
 
               {showMissionBuilder && (
-                <div className="mt-3 space-y-2.5">
-                  <input
-                    value={missionDraft.title}
-                    onChange={(event) => setMissionDraft((draft) => ({ ...draft, title: event.target.value }))}
-                    placeholder="Wire title *"
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
-                  />
-                  <textarea
-                    value={missionDraft.summary}
-                    onChange={(event) => setMissionDraft((draft) => ({ ...draft, summary: event.target.value }))}
-                    placeholder="Wire objective and expected measurable outcome *"
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30 resize-none min-h-[66px]"
-                  />
-                  <input
-                    value={missionDraft.successMetric}
-                    onChange={(event) => setMissionDraft((draft) => ({ ...draft, successMetric: event.target.value }))}
-                    placeholder="Success metric * (e.g., reduce delivery time by 20% in 7 days)"
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
-                  />
-                  <div className="grid md:grid-cols-2 gap-2">
-                    <select
-                      value={missionDraft.allianceId}
-                      onChange={(event) => setMissionDraft((draft) => ({ ...draft, allianceId: event.target.value }))}
-                      className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30"
-                    >
-                      {allAlliances.map((alliance) => (
-                        <option key={alliance.id} value={alliance.id} className="bg-gray-900">
-                          {alliance.name}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={missionDraft.effort}
-                      onChange={(event) => setMissionDraft((draft) => ({ ...draft, effort: event.target.value }))}
-                      className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30"
-                    >
-                      {["2-3 hours", "3-5 hours", "5-8 hours", "8-12 hours"].map((effort) => (
-                        <option key={effort} value={effort} className="bg-gray-900">
-                          {effort}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={missionDraft.deadlineDays}
-                      onChange={(event) => setMissionDraft((draft) => ({ ...draft, deadlineDays: Number(event.target.value) }))}
-                      className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30 md:col-span-2"
-                    >
-                      {[
-                        { value: 3, label: "Deadline: 3 days" },
-                        { value: 7, label: "Deadline: 7 days" },
-                        { value: 14, label: "Deadline: 14 days" },
-                        { value: 30, label: "Deadline: 30 days" },
-                      ].map((option) => (
-                        <option key={option.value} value={option.value} className="bg-gray-900">
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {missionDraft.deliverables.map((deliverable, index) => (
-                    <input
-                      key={index}
-                      value={deliverable}
-                      onChange={(event) => updateMissionDraftDeliverable(index, event.target.value)}
-                      placeholder={`Deliverable ${index + 1}${index < 2 ? " *" : ""}`}
-                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
-                    />
-                  ))}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-gray-500 text-[11px] uppercase tracking-wider">Reward Pool ({JOULE.ticker})</span>
-                      <span className="text-cyan-300 text-xs font-mono">{Math.round(missionDraftChecklist.rewardJou)} {JOULE.ticker}</span>
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-xl border border-gray-800 bg-black/25 p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <p className="text-white text-xs font-semibold uppercase tracking-wider">Wire Wizard</p>
+                      <span className="text-gray-500 text-[11px]">
+                        Step {missionWizardStep + 1}/{missionWizardSteps.length}
+                      </span>
                     </div>
-                    <input
-                      type="range"
-                      min={MIN_MISSION_REWARD_JOU}
-                      max={MAX_MISSION_REWARD_JOU}
-                      step={10}
-                      value={missionDraft.rewardJou}
-                      onChange={(event) =>
-                        setMissionDraft((draft) => ({ ...draft, rewardJou: Number(event.target.value) }))
-                      }
-                      className="w-full accent-emerald-500"
-                    />
-                    <p className="text-gray-500 text-[11px] mt-1">
-                      Escrow lock on launch: {missionDraftChecklist.escrowStake} {JOULE.ticker}
-                    </p>
+                    <div className="h-1.5 rounded-full bg-gray-800 overflow-hidden mb-2">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 transition-all duration-500"
+                        style={{ width: `${missionWizardProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-white text-sm font-medium">{currentMissionWizardStep.title}</p>
+                    <p className="text-gray-400 text-xs mt-1">{currentMissionWizardStep.purpose}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 mt-2">
+                      {missionWizardSteps.map((step, index) => (
+                        <button
+                          key={step.id}
+                          onClick={() => setMissionWizardStep(index)}
+                          className={`text-left rounded-lg px-2 py-1.5 border transition-all ${
+                            index === missionWizardStep
+                              ? "border-emerald-500/40 bg-emerald-500/10"
+                              : "border-gray-800 bg-gray-900/50 hover:border-gray-700"
+                          }`}
+                        >
+                          <p className="text-[11px] text-gray-300">
+                            {index + 1}. {step.title}
+                          </p>
+                          <p className={`text-[10px] mt-0.5 ${step.ready ? "text-emerald-300" : "text-gray-600"}`}>
+                            {step.ready ? "Ready" : "Pending"}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-gray-800 bg-black/20 p-2.5">
-                    <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-1.5">Required to launch</p>
-                    <div className="grid md:grid-cols-2 gap-1.5">
-                      {missionDraftChecklist.checks.map((item) => (
-                        <div key={item.label} className="flex items-center gap-1.5 text-[11px]">
-                          <CheckCircle2 size={12} className={item.ok ? "text-emerald-400" : "text-gray-700"} />
-                          <span className={item.ok ? "text-gray-300" : "text-gray-600"}>{item.label}</span>
+
+                  {missionWizardStep === 0 && (
+                    <div className="space-y-2.5">
+                      <input
+                        value={missionDraft.title}
+                        onChange={(event) => setMissionDraft((draft) => ({ ...draft, title: event.target.value }))}
+                        placeholder="Wire title *"
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                      />
+                      <textarea
+                        value={missionDraft.summary}
+                        onChange={(event) => setMissionDraft((draft) => ({ ...draft, summary: event.target.value }))}
+                        placeholder="What specific real-world outcome should this wire deliver? *"
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30 resize-none min-h-[72px]"
+                      />
+                      <input
+                        value={missionDraft.successMetric}
+                        onChange={(event) => setMissionDraft((draft) => ({ ...draft, successMetric: event.target.value }))}
+                        placeholder="Success metric * (e.g., 150 households switched to solar in 14 days)"
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                      />
+                      <p className="text-gray-500 text-[11px]">
+                        Tip: measurable metrics increase recruit quality and mission completion rate.
+                      </p>
+                    </div>
+                  )}
+
+                  {missionWizardStep === 1 && (
+                    <div className="space-y-2.5">
+                      <div className="grid md:grid-cols-2 gap-2">
+                        <select
+                          value={missionDraft.allianceId}
+                          onChange={(event) => setMissionDraft((draft) => ({ ...draft, allianceId: event.target.value }))}
+                          className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30"
+                        >
+                          {allAlliances.map((alliance) => (
+                            <option key={alliance.id} value={alliance.id} className="bg-gray-900">
+                              {alliance.name}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={missionDraft.effort}
+                          onChange={(event) => setMissionDraft((draft) => ({ ...draft, effort: event.target.value }))}
+                          className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30"
+                        >
+                          {["2-3 hours", "3-5 hours", "5-8 hours", "8-12 hours"].map((effort) => (
+                            <option key={effort} value={effort} className="bg-gray-900">
+                              {effort}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {missionDraft.deliverables.map((deliverable, index) => (
+                        <input
+                          key={index}
+                          value={deliverable}
+                          onChange={(event) => updateMissionDraftDeliverable(index, event.target.value)}
+                          placeholder={`Checkpoint ${index + 1}${index < 2 ? " *" : ""}`}
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                        />
+                      ))}
+                      <button
+                        onClick={appendMissionDraftDeliverable}
+                        className="px-2.5 py-1.5 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 transition-all"
+                      >
+                        + Add checkpoint
+                      </button>
+                      <p className="text-gray-500 text-[11px]">
+                        {missionDraftChecklist.deliverablesCount} checkpoint(s) defined. Minimum required: 2.
+                      </p>
+                    </div>
+                  )}
+
+                  {missionWizardStep === 2 && (
+                    <div className="space-y-2.5">
+                      <select
+                        value={missionDraft.deadlineDays}
+                        onChange={(event) => setMissionDraft((draft) => ({ ...draft, deadlineDays: Number(event.target.value) }))}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30"
+                      >
+                        {[
+                          { value: 3, label: "Deadline: 3 days" },
+                          { value: 7, label: "Deadline: 7 days" },
+                          { value: 14, label: "Deadline: 14 days" },
+                          { value: 30, label: "Deadline: 30 days" },
+                        ].map((option) => (
+                          <option key={option.value} value={option.value} className="bg-gray-900">
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-gray-500 text-[11px] uppercase tracking-wider">Reward Pool ({JOULE.ticker})</span>
+                          <span className="text-cyan-300 text-xs font-mono">
+                            {Math.round(missionDraftChecklist.rewardJou)} {JOULE.ticker}
+                          </span>
                         </div>
-                      ))}
+                        <input
+                          type="range"
+                          min={MIN_MISSION_REWARD_JOU}
+                          max={MAX_MISSION_REWARD_JOU}
+                          step={10}
+                          value={missionDraft.rewardJou}
+                          onChange={(event) =>
+                            setMissionDraft((draft) => ({ ...draft, rewardJou: Number(event.target.value) }))
+                          }
+                          className="w-full accent-emerald-500"
+                        />
+                        <p className="text-gray-500 text-[11px] mt-1">
+                          Escrow lock on launch: {missionDraftChecklist.escrowStake} {JOULE.ticker} • Wallet: {walletJoules} {JOULE.ticker}
+                        </p>
+                        {walletJoules < missionDraftChecklist.escrowStake && (
+                          <p className="text-amber-300 text-[11px] mt-1">
+                            You need {missionDraftChecklist.escrowStake - walletJoules} more {JOULE.ticker} to launch this wire.
+                          </p>
+                        )}
+                      </div>
                     </div>
+                  )}
+
+                  {missionWizardStep === 3 && (
+                    <div className="space-y-2.5">
+                      <div className="rounded-xl border border-gray-800 bg-black/20 p-2.5">
+                        <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-1.5">Wire Preview</p>
+                        <div className="space-y-1 text-[11px]">
+                          <p className="text-white">
+                            <span className="text-gray-500">Title:</span> {missionDraft.title || "—"}
+                          </p>
+                          <p className="text-white">
+                            <span className="text-gray-500">Alliance:</span> {selectedDraftAlliance?.name || "—"}
+                          </p>
+                          <p className="text-white">
+                            <span className="text-gray-500">Deadline:</span> {missionDraft.deadlineDays} days
+                          </p>
+                          <p className="text-white">
+                            <span className="text-gray-500">Reward:</span> {Math.round(missionDraftChecklist.rewardJou)} {JOULE.ticker} • Escrow {missionDraftChecklist.escrowStake} {JOULE.ticker}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-gray-800 bg-black/20 p-2.5">
+                        <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-1.5">Required to launch</p>
+                        <div className="grid md:grid-cols-2 gap-1.5">
+                          {missionDraftChecklist.checks.map((item) => (
+                            <div key={item.label} className="flex items-center gap-1.5 text-[11px]">
+                              <CheckCircle2 size={12} className={item.ok ? "text-emerald-400" : "text-gray-700"} />
+                              <span className={item.ok ? "text-gray-300" : "text-gray-600"}>{item.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => setMissionWizardStep((step) => Math.max(0, step - 1))}
+                      disabled={missionWizardStep === 0}
+                      className="px-3 py-2 rounded-xl bg-gray-800 text-gray-300 disabled:text-gray-600 disabled:bg-gray-900 text-xs transition-all"
+                    >
+                      Back
+                    </button>
+                    {missionWizardStep < missionWizardSteps.length - 1 ? (
+                      <button
+                        onClick={() => setMissionWizardStep((step) => Math.min(missionWizardSteps.length - 1, step + 1))}
+                        disabled={!missionWizardCanAdvance}
+                        className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-gray-900 disabled:text-gray-600 text-white text-xs font-semibold transition-all"
+                      >
+                        Continue
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleCreateMission}
+                        disabled={!missionDraftChecklist.canLaunch}
+                        className="px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs font-semibold transition-all"
+                      >
+                        Launch Wire + Generate Invite
+                      </button>
+                    )}
                   </div>
-                  <button
-                    onClick={handleCreateMission}
-                    disabled={!missionDraftChecklist.canLaunch}
-                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-sm font-semibold transition-all"
-                  >
-                    Launch Wire + Generate Invite
-                  </button>
-                  {!missionDraftChecklist.canLaunch && (
+                  {!missionWizardCanAdvance && missionWizardStep < missionWizardSteps.length - 1 && (
                     <p className="text-red-300 text-[11px]">
-                      Complete required fields and ensure escrow is funded to launch.
+                      Complete this step to continue.
                     </p>
                   )}
                 </div>
