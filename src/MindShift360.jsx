@@ -2131,8 +2131,103 @@ export default function MindShift360() {
     const allPosts = [...communityPosts, ...FEED_POSTS];
     const allianceReach = allAlliances.reduce((total, alliance) => total + (Number(alliance.members) || 0), 0);
     const risingMindsets = MINDSET_CLUSTERS.filter((cluster) => cluster.winning).length;
+    const highlightedMissions = SEED_MISSIONS.slice(0, 2);
     return (
       <div>
+        <div className="card p-5 mb-4 overflow-hidden relative" style={{ background: "linear-gradient(135deg, rgba(4,20,33,0.95), rgba(18,34,58,0.88))", borderColor: "rgba(16,185,129,0.25)" }}>
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: "radial-gradient(circle at 12% 20%, rgba(16,185,129,0.16), transparent 45%), radial-gradient(circle at 85% 15%, rgba(59,130,246,0.12), transparent 42%)" }}
+          />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 pulse-soft" />
+              <span className="text-emerald-300 text-xs font-semibold uppercase tracking-wider">Rewire is live</span>
+              <span className="text-blue-200/70 text-xs ml-auto">New coordination layer for the AI world</span>
+            </div>
+
+            <h2 className="text-white text-xl md:text-2xl font-black leading-tight mb-2">
+              Old social platforms capture attention.
+              <span className="text-gradient-multi"> Rewire coordinates action.</span>
+            </h2>
+            <p className="text-blue-100/80 text-sm mb-3 max-w-3xl">
+              Individuals now have AI leverage. The next step is local nucleus communities with practical systems for food,
+              water, energy, and logistics. Join missions, ship proof, and earn reputation.
+            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+              <div className="rounded-xl bg-black/25 border border-white/10 p-2.5">
+                <p className="text-[11px] text-blue-200/70 uppercase tracking-wider">Online now</p>
+                <p className="text-white text-sm font-mono font-semibold">{livePresence.onlineNow.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl bg-black/25 border border-white/10 p-2.5">
+                <p className="text-[11px] text-blue-200/70 uppercase tracking-wider">Active missions</p>
+                <p className="text-white text-sm font-mono font-semibold">{SEED_MISSIONS.length}</p>
+              </div>
+              <div className="rounded-xl bg-black/25 border border-white/10 p-2.5">
+                <p className="text-[11px] text-blue-200/70 uppercase tracking-wider">Proofs logged</p>
+                <p className="text-white text-sm font-mono font-semibold">{missionProofFeed.length}</p>
+              </div>
+              <div className="rounded-xl bg-black/25 border border-white/10 p-2.5">
+                <p className="text-[11px] text-blue-200/70 uppercase tracking-wider">Rewards claimed</p>
+                <p className="text-white text-sm font-mono font-semibold">{missionSummary.rewarded}</p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-2 mb-3">
+              <div className="rounded-xl p-3 bg-red-900/20 border border-red-500/20">
+                <p className="text-red-300 text-xs font-semibold uppercase tracking-wider mb-1">Old Platforms</p>
+                <p className="text-gray-200 text-xs">Scroll, react, forget. High engagement, low real-world outcomes.</p>
+              </div>
+              <div className="rounded-xl p-3 bg-emerald-900/20 border border-emerald-500/25">
+                <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1">Rewire</p>
+                <p className="text-gray-200 text-xs">Join mission → submit proof → claim reward → build compounding credibility.</p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-2 mb-3">
+              {highlightedMissions.map((mission) => (
+                <button
+                  key={mission.id}
+                  onClick={() => setTab("world")}
+                  className="text-left rounded-xl p-3 bg-black/25 border border-white/10 hover:border-emerald-400/40 transition-all"
+                >
+                  <p className="text-white text-sm font-semibold mb-1">{mission.title}</p>
+                  <p className="text-gray-300 text-xs mb-2 line-clamp-2">{mission.summary}</p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-lg text-[11px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                      ${mission.rewardUsd}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-lg text-[11px] bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                      +{mission.rewardPoints} pts
+                    </span>
+                    <span className="px-2 py-0.5 rounded-lg text-[11px] bg-blue-500/15 text-blue-300 border border-blue-500/25">
+                      {mission.effort}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setTab("world")}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm font-semibold rounded-xl hover:from-emerald-500 hover:to-blue-500 transition-all"
+              >
+                Open Missions
+              </button>
+              {!profile && (
+                <button
+                  onClick={() => setShowOnboard(true)}
+                  className="px-4 py-2 bg-white/10 border border-white/20 text-white text-sm rounded-xl hover:bg-white/15 transition-all"
+                >
+                  Join Rewire
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="card p-4 mb-4 overflow-hidden relative">
           <div className="absolute inset-0 shimmer opacity-30 pointer-events-none" />
           <div className="relative">
