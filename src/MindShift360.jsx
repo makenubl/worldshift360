@@ -2013,6 +2013,8 @@ export default function MindShift360() {
     setOtpIssuedFor("");
     setOtpDebugCode("");
     setOtpMessage("");
+    setShowLanding(false);
+    setTab("world");
     setNetworkStats((s) => ({ ...s, minds: s.minds + 1 }));
   }, [form, otpStatus]);
 
@@ -2039,6 +2041,12 @@ export default function MindShift360() {
       setTab("world");
     }
   }, [profile, tab]);
+
+  useEffect(() => {
+    if (profile && showLanding) {
+      setShowLanding(false);
+    }
+  }, [profile, showLanding]);
 
   const totalQi = useMemo(() => Object.values(routineAnswers).reduce((sum, value) => sum + value, 0), [routineAnswers]);
   const maxQi = useMemo(
