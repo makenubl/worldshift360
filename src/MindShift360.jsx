@@ -518,6 +518,102 @@ const NUCLEUS_SYSTEMS = [
   { id: "logistics", emoji: "📦", label: "Logistics Loop", detail: "Shared fleets, routing, and fulfillment" },
 ];
 
+const STRATEGY_COMPETITIONS = [
+  {
+    id: "arena_food_water",
+    resource: "Food + Water Networks",
+    controlAsset: "regional food reserves and irrigation credits",
+    dailyFlow: 2.1,
+    winRateA: 63.4,
+    sideA: {
+      key: "a",
+      allianceId: "a5",
+      name: "Autonomous Community Grid",
+      strategy: "Local AI farming + sensor water loops + on-chain co-op ownership",
+      treasury: 8.4,
+      whyWinning: [
+        "AI routing cuts spoilage and delivery friction",
+        "Transparent treasury attracts contributor capital",
+        "Local production reduces global supply shocks",
+      ],
+    },
+    sideB: {
+      key: "b",
+      allianceId: null,
+      name: "Legacy Import Coalition",
+      strategy: "Centralized import financing + subsidy-heavy distribution",
+      treasury: 6.8,
+      whyWinning: [
+        "Entrenched contracts with distributors",
+        "Established political relationships",
+        "Large inherited inventory infrastructure",
+      ],
+    },
+  },
+  {
+    id: "arena_energy",
+    resource: "Energy + Microgrid Infrastructure",
+    controlAsset: "district microgrid dispatch and peak energy credits",
+    dailyFlow: 1.8,
+    winRateA: 56.2,
+    sideA: {
+      key: "a",
+      allianceId: "a3",
+      name: "Global Solar Army",
+      strategy: "Distributed solar + storage + AI load balancing",
+      treasury: 7.1,
+      whyWinning: [
+        "Lower marginal cost per KWh over time",
+        "Faster outage recovery via local control",
+        "Community-owned payout models improve adoption",
+      ],
+    },
+    sideB: {
+      key: "b",
+      allianceId: null,
+      name: "Central Utility Bloc",
+      strategy: "Single-operator grid dependency with delayed modernization",
+      treasury: 8.3,
+      whyWinning: [
+        "Existing legal monopolies",
+        "Regulatory complexity slows alternatives",
+        "Capital base already deployed in legacy plants",
+      ],
+    },
+  },
+  {
+    id: "arena_logistics",
+    resource: "Logistics + Trade Corridors",
+    controlAsset: "routing priority and warehouse throughput capacity",
+    dailyFlow: 2.6,
+    winRateA: 60.1,
+    sideA: {
+      key: "a",
+      allianceId: "a1",
+      name: "Builders Without Borders",
+      strategy: "AI dispatch + autonomous fleets + tokenized warehouse access",
+      treasury: 9.2,
+      whyWinning: [
+        "Dynamic pricing allocates capacity efficiently",
+        "Machine-to-machine settlement reduces delays",
+        "Open infrastructure standards accelerate integration",
+      ],
+    },
+    sideB: {
+      key: "b",
+      allianceId: null,
+      name: "Broker-Led Freight Cartel",
+      strategy: "Manual brokerage and closed routing networks",
+      treasury: 7.4,
+      whyWinning: [
+        "Deep incumbent shipper relationships",
+        "Opaque fee structures preserve margins",
+        "Large existing broker force in key corridors",
+      ],
+    },
+  },
+];
+
 // ── PARADIGM SHIFTS ──
 const PARADIGMS = [
   {
@@ -1189,6 +1285,7 @@ const LIVE_REGIONS = ["Lagos", "Karachi", "Nairobi", "Berlin", "Jakarta", "Toron
 
 const randomItem = (items) => items[Math.floor(Math.random() * items.length)];
 const randomRange = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const createLiveEvent = (ageSec = 0) => {
   const knownUser = Math.random() > 0.35;
@@ -1324,6 +1421,9 @@ export default function MindShift360() {
   const [missionState, setMissionState] = useState({});
   const [missionProofInputs, setMissionProofInputs] = useState({});
   const [missionProofFeed, setMissionProofFeed] = useState(SEED_MISSION_PROOFS);
+  const [strategyBattles, setStrategyBattles] = useState(STRATEGY_COMPETITIONS);
+  const [strategySupport, setStrategySupport] = useState({});
+  const [allocationAmount, setAllocationAmount] = useState(50);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -1387,6 +1487,32 @@ export default function MindShift360() {
   }, []);
 
   useEffect(() => {
+    const strategyTicker = setInterval(() => {
+      setStrategyBattles((prev) =>
+        prev.map((battle) => {
+          const supportedSide = strategySupport[battle.id];
+          const supportBias =
+            supportedSide === "a" ? Math.min(2.5, allocationAmount / 32) : supportedSide === "b" ? -Math.min(2.5, allocationAmount / 32) : 0;
+          const volatility = (Math.random() - 0.5) * 1.8;
+          const nextWinRateA = clamp(battle.winRateA + supportBias * 0.12 + volatility, 18, 82);
+
+          const treasuryDriftA = battle.dailyFlow * ((nextWinRateA / 100) * 0.06 + 0.015);
+          const treasuryDriftB = battle.dailyFlow * (((100 - nextWinRateA) / 100) * 0.06 + 0.015);
+
+          return {
+            ...battle,
+            winRateA: Number(nextWinRateA.toFixed(1)),
+            sideA: { ...battle.sideA, treasury: Number((battle.sideA.treasury + treasuryDriftA).toFixed(2)) },
+            sideB: { ...battle.sideB, treasury: Number((battle.sideB.treasury + treasuryDriftB).toFixed(2)) },
+          };
+        }),
+      );
+    }, 5000);
+
+    return () => clearInterval(strategyTicker);
+  }, [allocationAmount, strategySupport]);
+
+  useEffect(() => {
     if (apiConnected) return undefined;
 
     const interval = setInterval(() => {
@@ -1423,15 +1549,24 @@ export default function MindShift360() {
       const savedUserAlliances = localStorage.getItem("rewire_user_alliances");
       const savedMissionState = localStorage.getItem("rewire_mission_state");
       const savedMissionProofFeed = localStorage.getItem("rewire_mission_proof_feed");
+      const savedStrategyBattles = localStorage.getItem("rewire_strategy_battles");
+      const savedStrategySupport = localStorage.getItem("rewire_strategy_support");
+      const savedAllocationAmount = localStorage.getItem("rewire_allocation_amount");
 
       if (savedProfile) setProfile(JSON.parse(savedProfile));
       if (savedJoinedAlliances) setJoinedAlliances(new Set(JSON.parse(savedJoinedAlliances)));
       if (savedUserAlliances) setUserAlliances(JSON.parse(savedUserAlliances));
       if (savedMissionState) setMissionState(JSON.parse(savedMissionState));
       if (savedMissionProofFeed) setMissionProofFeed(JSON.parse(savedMissionProofFeed));
+      if (savedStrategyBattles) setStrategyBattles(JSON.parse(savedStrategyBattles));
+      if (savedStrategySupport) setStrategySupport(JSON.parse(savedStrategySupport));
+      if (savedAllocationAmount) setAllocationAmount(Number(savedAllocationAmount));
     } catch {
       setMissionState({});
       setMissionProofFeed(SEED_MISSION_PROOFS);
+      setStrategyBattles(STRATEGY_COMPETITIONS);
+      setStrategySupport({});
+      setAllocationAmount(50);
     } finally {
       setHydrated(true);
     }
@@ -1461,6 +1596,21 @@ export default function MindShift360() {
     if (!hydrated) return;
     localStorage.setItem("rewire_mission_proof_feed", JSON.stringify(missionProofFeed));
   }, [hydrated, missionProofFeed]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_strategy_battles", JSON.stringify(strategyBattles));
+  }, [hydrated, strategyBattles]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_strategy_support", JSON.stringify(strategySupport));
+  }, [hydrated, strategySupport]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_allocation_amount", String(allocationAmount));
+  }, [hydrated, allocationAmount]);
 
   const toggleReaction = useCallback((postId, key) => {
     setUserReactions((prev) => {
@@ -1654,6 +1804,78 @@ export default function MindShift360() {
 
     return { joined, submitted, rewarded, totalUsd, totalPoints };
   }, [missionState]);
+
+  const treasuryFlow = useMemo(() => {
+    const treasuryLocked = strategyBattles.reduce((sum, battle) => sum + battle.sideA.treasury + battle.sideB.treasury, 0);
+    const missionEscrow = Number((treasuryLocked * 0.31).toFixed(2));
+    const resourceOps = Number((treasuryLocked * 0.29).toFixed(2));
+    const builderRewards = Number((treasuryLocked * 0.24 + missionSummary.totalUsd / 1000).toFixed(2));
+    const strategicReserve = Number((treasuryLocked - missionEscrow - resourceOps - builderRewards).toFixed(2));
+    return {
+      treasuryLocked: Number(treasuryLocked.toFixed(2)),
+      missionEscrow,
+      resourceOps,
+      builderRewards,
+      strategicReserve,
+    };
+  }, [missionSummary.totalUsd, strategyBattles]);
+
+  const strategyLeaders = useMemo(
+    () =>
+      strategyBattles.map((battle) => {
+        const leaderIsA = battle.winRateA >= 50;
+        const leader = leaderIsA ? battle.sideA : battle.sideB;
+        const loser = leaderIsA ? battle.sideB : battle.sideA;
+        const leaderWinRate = Number((leaderIsA ? battle.winRateA : 100 - battle.winRateA).toFixed(1));
+        const takeoverActive = leaderWinRate >= 60;
+        return { battleId: battle.id, leader, loser, leaderWinRate, takeoverActive };
+      }),
+    [strategyBattles],
+  );
+
+  const supportStrategy = useCallback(
+    (battle, sideKey) => {
+      if (!profile) {
+        setShowOnboard(true);
+        return;
+      }
+
+      const contribution = clamp(Number(allocationAmount) || 0, 10, 500);
+      const scoreImpact = Math.min(4.5, contribution / 40);
+      const treasuryImpact = contribution / 1000;
+
+      setStrategySupport((prev) => ({ ...prev, [battle.id]: sideKey }));
+      setStrategyBattles((prev) =>
+        prev.map((entry) => {
+          if (entry.id !== battle.id) return entry;
+          const nextWinRateA = clamp(entry.winRateA + (sideKey === "a" ? scoreImpact : -scoreImpact), 18, 82);
+          if (sideKey === "a") {
+            return {
+              ...entry,
+              winRateA: Number(nextWinRateA.toFixed(1)),
+              sideA: { ...entry.sideA, treasury: Number((entry.sideA.treasury + treasuryImpact).toFixed(2)) },
+            };
+          }
+          return {
+            ...entry,
+            winRateA: Number(nextWinRateA.toFixed(1)),
+            sideB: { ...entry.sideB, treasury: Number((entry.sideB.treasury + treasuryImpact).toFixed(2)) },
+          };
+        }),
+      );
+
+      const selectedSide = sideKey === "a" ? battle.sideA : battle.sideB;
+      if (selectedSide.allianceId) {
+        setJoinedAlliances((prev) => {
+          if (prev.has(selectedSide.allianceId)) return prev;
+          return new Set([...prev, selectedSide.allianceId]);
+        });
+      }
+
+      setNetworkStats((stats) => ({ ...stats, interactions: stats.interactions + 1, accuracy: Math.min(99, stats.accuracy + 0.0015) }));
+    },
+    [allocationAmount, profile],
+  );
 
   const joinMission = useCallback(
     (mission) => {
@@ -2132,6 +2354,7 @@ export default function MindShift360() {
     const allianceReach = allAlliances.reduce((total, alliance) => total + (Number(alliance.members) || 0), 0);
     const risingMindsets = MINDSET_CLUSTERS.filter((cluster) => cluster.winning).length;
     const highlightedMissions = SEED_MISSIONS.slice(0, 2);
+    const activeTakeovers = strategyLeaders.filter((leader) => leader.takeoverActive).length;
     return (
       <div>
         <div className="card p-5 mb-4 overflow-hidden relative" style={{ background: "linear-gradient(135deg, rgba(4,20,33,0.95), rgba(18,34,58,0.88))", borderColor: "rgba(16,185,129,0.25)" }}>
@@ -2172,6 +2395,18 @@ export default function MindShift360() {
                 <p className="text-[11px] text-blue-200/70 uppercase tracking-wider">Rewards claimed</p>
                 <p className="text-white text-sm font-mono font-semibold">{missionSummary.rewarded}</p>
               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+              <span className="px-2.5 py-1 rounded-lg text-xs bg-emerald-500/10 text-emerald-200 border border-emerald-500/20">
+                {allianceReach.toLocaleString()} alliance members active
+              </span>
+              <span className="px-2.5 py-1 rounded-lg text-xs bg-purple-500/10 text-purple-200 border border-purple-500/20">
+                {risingMindsets} mindsets driving next-cycle growth
+              </span>
+              <span className="px-2.5 py-1 rounded-lg text-xs bg-blue-500/10 text-blue-200 border border-blue-500/20">
+                {livePresence.activeCountries} countries in live coordination
+              </span>
             </div>
 
             <div className="grid md:grid-cols-2 gap-2 mb-3">
@@ -2257,21 +2492,36 @@ export default function MindShift360() {
           </div>
         </div>
 
-        <div className="card p-5 mb-4 overflow-hidden relative">
-          <div className="absolute inset-0 shimmer opacity-20 pointer-events-none" />
+        <div className="card p-5 mb-4 overflow-hidden relative" style={{ borderColor: "rgba(59,130,246,0.3)" }}>
+          <div className="absolute inset-0 shimmer opacity-15 pointer-events-none" />
           <div className="relative">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles size={14} className="text-emerald-400" />
-              <span className="text-emerald-400 text-xs font-semibold uppercase tracking-wider">Rewire Thesis</span>
-              <span className="text-gray-600 text-xs ml-auto">Old platforms are attention loops</span>
+              <Network size={14} className="text-blue-400" />
+              <span className="text-blue-300 text-xs font-semibold uppercase tracking-wider">Benefit + Strategy Arena</span>
+              <span className="text-gray-600 text-xs ml-auto">{activeTakeovers} takeover races active</span>
             </div>
             <h2 className="text-white text-lg font-bold mb-2 leading-snug">
-              AI is empowering individuals. Nucleus-level self-sustained communities are next.
+              Join a strategy, fund it with decentralized currency, and win control over real resources.
             </h2>
             <p className="text-gray-300 text-sm leading-relaxed mb-3">
-              Rewire combines intelligence, physical infrastructure, and programmable ownership so communities can operate
-              food, water, energy, and logistics as autonomous alliances.
+              Practical value: if your strategy wins, your alliance gets leadership over weaker models and governs resource
+              execution for food, energy, and logistics loops.
             </p>
+
+            <div className="grid gap-2 mb-3 md:grid-cols-3">
+              <div className="rounded-xl bg-emerald-950/15 border border-emerald-500/20 p-3">
+                <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1">Benefit 01</p>
+                <p className="text-gray-200 text-xs">Earn via mission payouts and transparent treasury allocations.</p>
+              </div>
+              <div className="rounded-xl bg-blue-950/15 border border-blue-500/20 p-3">
+                <p className="text-blue-300 text-xs font-semibold uppercase tracking-wider mb-1">Benefit 02</p>
+                <p className="text-gray-200 text-xs">Get governance weight when your strategy outperforms incumbents.</p>
+              </div>
+              <div className="rounded-xl bg-purple-950/15 border border-purple-500/20 p-3">
+                <p className="text-purple-300 text-xs font-semibold uppercase tracking-wider mb-1">Benefit 03</p>
+                <p className="text-gray-200 text-xs">Access shared infrastructure capacity through alliance membership.</p>
+              </div>
+            </div>
 
             <div className="grid gap-2 mb-3 md:grid-cols-3">
               {REWIRE_STACK.map((item) => {
@@ -2288,28 +2538,137 @@ export default function MindShift360() {
               })}
             </div>
 
-            <div className="grid gap-2 mb-3 md:grid-cols-2">
+            <div className="flex flex-wrap gap-1.5 mb-3">
               {NUCLEUS_SYSTEMS.map((system) => (
-                <div key={system.id} className="rounded-xl bg-blue-950/10 border border-blue-500/15 p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base">{system.emoji}</span>
-                    <span className="text-blue-300 text-xs font-semibold">{system.label}</span>
-                  </div>
-                  <p className="text-gray-400 text-xs">{system.detail}</p>
-                </div>
+                <span key={system.id} className="px-2.5 py-1 rounded-lg text-xs bg-blue-950/20 text-blue-200 border border-blue-500/20">
+                  {system.emoji} {system.label}
+                </span>
               ))}
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-3">
-              <span className="px-2.5 py-1 rounded-lg text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                {allianceReach.toLocaleString()} alliance members active
-              </span>
-              <span className="px-2.5 py-1 rounded-lg text-xs bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                {risingMindsets} cross-border mindsets compounding
-              </span>
-              <span className="px-2.5 py-1 rounded-lg text-xs bg-yellow-500/10 text-yellow-300 border border-yellow-500/20">
-                {livePresence.activeCountries} countries coordinating in real time
-              </span>
+            <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-3 mb-3">
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                Decentralized Currency Flow (USDC rails)
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="px-2 py-1 rounded-lg bg-gray-800 text-gray-200">
+                  Treasury Locked: {treasuryFlow.treasuryLocked.toLocaleString(undefined, { maximumFractionDigits: 2 })}M
+                </span>
+                <span className="text-gray-600">→</span>
+                <span className="px-2 py-1 rounded-lg bg-blue-900/30 border border-blue-500/20 text-blue-200">
+                  Mission Escrow: {treasuryFlow.missionEscrow.toLocaleString(undefined, { maximumFractionDigits: 2 })}M
+                </span>
+                <span className="text-gray-600">→</span>
+                <span className="px-2 py-1 rounded-lg bg-emerald-900/30 border border-emerald-500/20 text-emerald-200">
+                  Resource Ops: {treasuryFlow.resourceOps.toLocaleString(undefined, { maximumFractionDigits: 2 })}M
+                </span>
+                <span className="text-gray-600">→</span>
+                <span className="px-2 py-1 rounded-lg bg-purple-900/30 border border-purple-500/20 text-purple-200">
+                  Builder Rewards: {treasuryFlow.builderRewards.toLocaleString(undefined, { maximumFractionDigits: 2 })}M
+                </span>
+                <span className="text-gray-600">→</span>
+                <span className="px-2 py-1 rounded-lg bg-yellow-900/30 border border-yellow-500/20 text-yellow-200">
+                  Strategic Reserve: {treasuryFlow.strategicReserve.toLocaleString(undefined, { maximumFractionDigits: 2 })}M
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-3 mb-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Contribution Size</span>
+                <span className="text-emerald-300 text-xs font-mono ml-auto">{allocationAmount} USDC per strategy vote</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={500}
+                step={10}
+                value={allocationAmount}
+                onChange={(event) => setAllocationAmount(Number(event.target.value))}
+                className="w-full accent-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-3 mb-3">
+              {strategyBattles.map((battle) => {
+                const winRateA = battle.winRateA;
+                const winRateB = Number((100 - winRateA).toFixed(1));
+                const leaderIsA = winRateA >= 50;
+                const leader = leaderIsA ? battle.sideA : battle.sideB;
+                const loser = leaderIsA ? battle.sideB : battle.sideA;
+                const leaderWinRate = leaderIsA ? winRateA : winRateB;
+                const controlShiftActive = leaderWinRate >= 60;
+                const mySupport = strategySupport[battle.id];
+                const leaderReasons = leaderIsA ? battle.sideA.whyWinning : battle.sideB.whyWinning;
+
+                return (
+                  <div key={battle.id} className="rounded-xl border border-gray-800 bg-gray-900/35 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                      <div>
+                        <p className="text-white text-sm font-semibold">{battle.resource}</p>
+                        <p className="text-gray-500 text-xs">Competing for {battle.controlAsset}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-lg text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                        {battle.dailyFlow.toFixed(1)}M USDC/day
+                      </span>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-2 mb-2">
+                      <button
+                        onClick={() => supportStrategy(battle, "a")}
+                        className={`text-left rounded-xl p-3 border transition-all ${mySupport === "a" ? "border-emerald-400 bg-emerald-950/25" : "border-gray-800 bg-gray-900/50 hover:border-emerald-500/40"}`}
+                      >
+                        <p className="text-white text-xs font-semibold mb-0.5">{battle.sideA.name}</p>
+                        <p className="text-gray-400 text-xs mb-1">{battle.sideA.strategy}</p>
+                        <p className="text-emerald-300 text-xs font-mono">Treasury: {battle.sideA.treasury.toFixed(2)}M</p>
+                        <p className="text-gray-500 text-[11px] mt-1">{mySupport === "a" ? "Supported ✓" : "Join this strategy"}</p>
+                      </button>
+                      <button
+                        onClick={() => supportStrategy(battle, "b")}
+                        className={`text-left rounded-xl p-3 border transition-all ${mySupport === "b" ? "border-blue-400 bg-blue-950/25" : "border-gray-800 bg-gray-900/50 hover:border-blue-500/40"}`}
+                      >
+                        <p className="text-white text-xs font-semibold mb-0.5">{battle.sideB.name}</p>
+                        <p className="text-gray-400 text-xs mb-1">{battle.sideB.strategy}</p>
+                        <p className="text-blue-300 text-xs font-mono">Treasury: {battle.sideB.treasury.toFixed(2)}M</p>
+                        <p className="text-gray-500 text-[11px] mt-1">{mySupport === "b" ? "Supported ✓" : "Join this strategy"}</p>
+                      </button>
+                    </div>
+
+                    <div className="rounded-xl bg-black/20 border border-gray-800 p-2.5 mb-2">
+                      <div className="flex items-center justify-between text-[11px] mb-1">
+                        <span className="text-emerald-300">{battle.sideA.name}: {winRateA.toFixed(1)}%</span>
+                        <span className="text-blue-300">{battle.sideB.name}: {winRateB.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-gray-800 overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 transition-all" style={{ width: `${winRateA}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-2">
+                      <div className="rounded-lg p-2 bg-emerald-950/15 border border-emerald-500/20">
+                        <p className="text-emerald-300 text-[11px] font-semibold uppercase tracking-wider mb-1">
+                          Why {leader.name} is leading
+                        </p>
+                        {leaderReasons.slice(0, 2).map((reason, index) => (
+                          <p key={index} className="text-gray-300 text-xs leading-relaxed">
+                            • {reason}
+                          </p>
+                        ))}
+                      </div>
+                      <div className="rounded-lg p-2 bg-blue-950/15 border border-blue-500/20">
+                        <p className="text-blue-300 text-[11px] font-semibold uppercase tracking-wider mb-1">
+                          Control Outcome
+                        </p>
+                        <p className="text-gray-300 text-xs leading-relaxed">
+                          {controlShiftActive
+                            ? `${leader.name} is asserting leadership over ${loser.name}. Resource control is shifting to alliance members backing ${leader.name}.`
+                            : `${leader.name} is ahead, but governance transfer has not locked yet. Push above 60% to control this resource layer.`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -2317,7 +2676,7 @@ export default function MindShift360() {
                 onClick={() => setTab("world")}
                 className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm font-medium rounded-xl hover:from-emerald-500 hover:to-blue-500 transition-all"
               >
-                View Nucleus Alliances
+                Open Community Arena
               </button>
               {!profile && (
                 <button
