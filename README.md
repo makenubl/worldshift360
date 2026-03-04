@@ -1,6 +1,6 @@
-# MindShift360
+# Rewire
 
-UI prototype for MindShift360 (“Collective Intelligence”).
+UI prototype for Rewire (“Collective Intelligence”).
 
 ## Backend
 

@@ -431,6 +431,51 @@ const FEED_POSTS = [
     time: "8h ago",
     views: "89.3K",
   },
+  {
+    id: "p6",
+    type: "ai_scenario",
+    aiTitle: "The Next Decade: Intelligence + Robotics + Web3 = Autonomous Economies",
+    aiBody:
+      "The biggest shift ahead is the fusion of intelligence, infrastructure, and ownership.\n\nAI is creating intelligence. Robotics gives that intelligence physical presence. Web3 creates programmable ownership and economic coordination. Together, this moves us from software economies to autonomous economic systems.\n\nAI agents can reason, plan, and automate. Robots can execute in warehouses, factories, farms, and logistics corridors. But these systems still need an economic coordination layer to exchange value, share data, and operate across global infrastructure.\n\nBlockchains provide that layer: programmable ownership, decentralized infrastructure, and global settlement rails that AI agents and robotic fleets can use natively. The result is robotics networks compensated automatically for real-world data, AI agents operating in decentralized compute/storage/bandwidth markets, and tokenized physical assets directing capital into real infrastructure.\n\nThe end state is self-sustained alliances where communities coordinate food, energy, water, transport, and local production with autonomous software + machine networks.",
+    aiVerdict: "likely",
+    category: "technology",
+    severity: "critical",
+    reactions: { fire: 1984, insight: 2670, concern: 721, strength: 1458, think: 1102 },
+    comments: [
+      {
+        user: USER_PROFILES[7],
+        text: "If this stack is real, cities in the Global South can skip legacy systems and build local autonomous supply chains from day one.",
+        time: "1h ago",
+        likes: 412,
+        replies: [
+          {
+            user: USER_PROFILES[3],
+            text: "Start with food and water. If local production and irrigation are automated and funded transparently, communities become resilient first.",
+            time: "42m ago",
+            likes: 236,
+          },
+        ],
+      },
+      {
+        user: USER_PROFILES[0],
+        text: "Agent-to-agent payments and verifiable machine outputs could finally make global infrastructure coordination practical at scale.",
+        time: "2h ago",
+        likes: 529,
+        replies: [],
+      },
+    ],
+    poll: {
+      question: "What should autonomous community alliances coordinate first?",
+      options: [
+        { text: "Food + water systems", votes: 3210 },
+        { text: "Energy + microgrids", votes: 2874 },
+        { text: "Logistics + warehousing", votes: 1642 },
+        { text: "Local compute + connectivity", votes: 1390 },
+      ],
+    },
+    time: "2h ago",
+    views: "52.7K",
+  },
 ];
 
 // ── TRENDING TOPICS ──
@@ -841,6 +886,40 @@ const SEED_ALLIANCES = [
     ],
     tags: ["faith", "technology", "knowledge", "fintech"],
     mindsets: ["seekers", "builders"],
+  },
+  {
+    id: "a5",
+    name: "Autonomous Community Grid",
+    emoji: "🤖🌾🔗",
+    founder: { name: "Nia Okafor", avatar: "👷", handle: "@nia_builder" },
+    members: 11204,
+    founded: "1 month ago",
+    worldVision:
+      "Communities should be able to sustain themselves with local food, water, energy, and logistics systems coordinated by AI, robotics, and programmable ownership. Dependency should be optional, not mandatory.",
+    commitments: [
+      "Deploy at least one local automation pilot for food, water, or logistics in your district",
+      "Open-source operational data so other communities can replicate proven models",
+      "Use transparent on-chain accounting for funding and machine output verification",
+      "Prioritize essentials first: food, water, energy, then scale to manufacturing and trade",
+    ],
+    philosophy:
+      "AI without physical execution is incomplete. Robotics without ownership rails is fragile. Web3 without real-world infrastructure is abstract. The power is in combining all three to produce resilient, self-sustained local economies.",
+    discussion: [
+      {
+        user: { name: "Sara Ahmed", avatar: "👩‍💼" },
+        text: "We are exploring tokenized financing for cold-chain + warehouse robots tied to measurable food loss reduction.",
+        time: "3h ago",
+        likes: 611,
+      },
+      {
+        user: { name: "Muhammad Iqbal", avatar: "👨‍🌾" },
+        text: "If alliances can fund sensors, irrigation bots, and storage together, farms can stabilize output and pricing locally.",
+        time: "1h ago",
+        likes: 447,
+      },
+    ],
+    tags: ["ai", "robotics", "web3", "food", "infrastructure", "self-sustained"],
+    mindsets: ["builders", "connectors", "guardians"],
   },
 ];
 
@@ -1551,7 +1630,7 @@ export default function MindShift360() {
             )}
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-white font-medium text-sm">{isAI ? "MindShift AI" : post.user.name}</span>
+                <span className="text-white font-medium text-sm">{isAI ? "Rewire AI" : post.user.name}</span>
                 {isAI && (
                   <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
                     <CheckCircle2 size={10} className="text-white" />
@@ -3115,9 +3194,7 @@ export default function MindShift360() {
               <Flag size={14} className="text-white" />
             </div>
             <div>
-              <h1 className="text-sm font-bold text-white leading-none">
-                MindShift<span className="text-gradient-green">360</span>
-              </h1>
+              <h1 className="text-sm font-bold text-white leading-none">Rewire</h1>
               <span className="text-gray-600 text-xs leading-none">Collective Intelligence</span>
             </div>
           </div>
@@ -3149,85 +3226,6 @@ export default function MindShift360() {
         <main className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="max-w-2xl mx-auto px-4 py-4">{currentPage}</div>
         </main>
-
-        <aside className="w-72 border-l border-gray-800/50 overflow-y-auto scrollbar-thin hidden lg:block p-4">
-          <div className="mb-6">
-            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <TrendingUp size={14} className="text-emerald-400" /> Trending Globally
-            </h3>
-            <div className="space-y-1">
-              {TRENDING.map((t, i) => (
-                <div key={i} className="trend-tag p-2.5 rounded-xl border border-transparent cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <span className="text-emerald-400 text-sm font-medium">#{t.tag}</span>
-                    {t.trend === "new" && <Badge text="NEW" color="purple" />}
-                  </div>
-                  <span className="text-gray-600 text-xs">{t.posts} posts</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card p-4 mb-4">
-            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <Network size={14} className="text-blue-400" /> Network Health
-            </h3>
-            <div className="space-y-2.5">
-              {[
-                { label: "Online Now", value: livePresence.onlineNow.toLocaleString(), color: "#22c55e" },
-                { label: "Joining / min", value: livePresence.joiningPerMin.toLocaleString(), color: "#f59e0b" },
-                { label: "Connected Minds", value: networkStats.minds.toLocaleString(), color: "#10b981" },
-                { label: "Total Interactions", value: networkStats.interactions.toLocaleString(), color: "#3b82f6" },
-                { label: "Prediction Accuracy", value: `${networkStats.accuracy.toFixed(1)}%`, color: "#8b5cf6" },
-              ].map((s, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <span className="text-gray-500 text-xs">{s.label}</span>
-                  <span className="text-sm font-mono font-medium" style={{ color: s.color }}>
-                    {s.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className="text-gray-700 text-xs mt-3 italic">Gets smarter with every interaction</p>
-          </div>
-
-          <div className="card p-4">
-            <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <GitBranch size={14} className="text-purple-400" /> Paradigm Readiness
-            </h3>
-            <div className="space-y-2">
-              {PARADIGMS.map((p, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-800/30 rounded-lg p-1.5 -mx-1.5 transition-all"
-                  onClick={() => {
-                    setTab("paradigm");
-                    setExpandedParadigm(p.id);
-                  }}
-                >
-                  <span className="text-gray-400 text-xs flex-1 truncate">
-                    {p.old} → {p.new_}
-                  </span>
-                  <div className="w-16 h-1.5 bg-gray-800 rounded-full">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${p.readiness}%`,
-                        background: p.readiness < 40 ? "#ef4444" : p.readiness < 60 ? "#f59e0b" : "#10b981",
-                      }}
-                    />
-                  </div>
-                  <span
-                    className="text-xs font-mono w-8 text-right"
-                    style={{ color: p.readiness < 40 ? "#ef4444" : p.readiness < 60 ? "#f59e0b" : "#10b981" }}
-                  >
-                    {p.readiness}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
       </div>
 
       <nav className="flex-shrink-0 border-t border-gray-800/50 bg-gray-950/90" style={{ backdropFilter: "blur(12px)" }}>
