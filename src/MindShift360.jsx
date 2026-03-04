@@ -1025,6 +1025,16 @@ const formatActivityAge = (ageSec) => {
   return `${Math.floor(ageSec / 60)}m ago`;
 };
 
+const normalizeLiveEvent = (event) => ({
+  id: event?.id || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  name: event?.name || "Guest",
+  avatar: event?.avatar || "👤",
+  action: event?.action || "joined",
+  target: event?.target || "Global Feed",
+  location: event?.location || "",
+  ageSec: Number.isFinite(event?.ageSec) ? event.ageSec : 0,
+});
+
 // ── ISOLATED CLOCK ──
 const LiveClock = ({ className }) => {
   const [t, setT] = useState(new Date());
@@ -1102,8 +1112,59 @@ export default function MindShift360() {
   const [liveEvents, setLiveEvents] = useState(() =>
     [0, 6, 14, 25, 39, 52].map((age) => createLiveEvent(age)),
   );
+  const [apiConnected, setApiConnected] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    const loadLiveData = async () => {
+      try {
+        const response = await fetch("/api/live", { cache: "no-store" });
+        if (!response.ok) throw new Error(`live api ${response.status}`);
+        const payload = await response.json();
+        if (cancelled) return;
+
+        setApiConnected(true);
+
+        if (payload?.networkStats) {
+          setNetworkStats((stats) => ({
+            minds: Math.max(stats.minds, payload.networkStats.minds ?? stats.minds),
+            interactions: Math.max(stats.interactions, payload.networkStats.interactions ?? stats.interactions),
+            accuracy: Math.max(stats.accuracy, payload.networkStats.accuracy ?? stats.accuracy),
+          }));
+        }
+        if (payload?.livePresence) {
+          setLivePresence((presence) => ({
+            onlineNow: payload.livePresence.onlineNow ?? presence.onlineNow,
+            joiningPerMin: payload.livePresence.joiningPerMin ?? presence.joiningPerMin,
+            postsPerMin: payload.livePresence.postsPerMin ?? presence.postsPerMin,
+            activeCountries: payload.livePresence.activeCountries ?? presence.activeCountries,
+          }));
+        }
+        if (payload?.fomoStats) {
+          setFomoStats((stats) => ({
+            nextDropInMin: payload.fomoStats.nextDropInMin ?? stats.nextDropInMin,
+            seatsLeft: payload.fomoStats.seatsLeft ?? stats.seatsLeft,
+          }));
+        }
+        if (Array.isArray(payload?.liveEvents) && payload.liveEvents.length > 0) {
+          setLiveEvents(payload.liveEvents.map(normalizeLiveEvent));
+        }
+      } catch {
+        if (!cancelled) setApiConnected(false);
+      }
+    };
+
+    loadLiveData();
+    const interval = setInterval(loadLiveData, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (apiConnected) return undefined;
+
     const interval = setInterval(() => {
       setNetworkStats((stats) => ({
         ...stats,
@@ -1134,7 +1195,7 @@ export default function MindShift360() {
     }, 4000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [apiConnected]);
 
   const toggleReaction = useCallback((postId, key) => {
     setUserReactions((prev) => {
@@ -2199,7 +2260,10 @@ export default function MindShift360() {
                 <span className="text-white font-medium">{item.name}</span> {item.action}{" "}
                 <span className="text-emerald-400">{item.target}</span>
               </span>
-              <span className="text-gray-700 text-xs flex-shrink-0 ml-auto">{formatActivityAge(item.ageSec)}</span>
+              <span className="text-gray-700 text-xs flex-shrink-0 ml-auto">
+                {item.location ? `${item.location} · ` : ""}
+                {formatActivityAge(item.ageSec)}
+              </span>
             </div>
           ))}
         </div>
