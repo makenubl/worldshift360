@@ -3142,15 +3142,23 @@ export default function MindShift360() {
     return (
       <div className="min-h-screen bg-gray-950 text-white overflow-x-hidden relative">
         <style>{css}</style>
+        <div className="absolute inset-0">
+          <img
+            src="/assets/nasa-sls-full-moon-hero.jpg"
+            alt="Full moon over NASA SLS and Orion at Launch Pad 39B"
+            className="w-full h-full object-cover"
+            style={{ objectPosition: "52% 40%" }}
+          />
+        </div>
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(circle at 8% 12%, rgba(16,185,129,0.12), transparent 44%), radial-gradient(circle at 88% 18%, rgba(59,130,246,0.14), transparent 40%), radial-gradient(circle at 50% 100%, rgba(99,102,241,0.12), transparent 50%)",
+              "linear-gradient(120deg, rgba(2,8,20,0.62), rgba(3,10,25,0.5) 45%, rgba(6,14,30,0.68)), radial-gradient(circle at 8% 12%, rgba(16,185,129,0.1), transparent 44%), radial-gradient(circle at 88% 18%, rgba(59,130,246,0.12), transparent 40%), radial-gradient(circle at 50% 100%, rgba(99,102,241,0.08), transparent 50%)",
           }}
         />
         <div className="relative min-h-screen flex items-start md:items-center justify-center px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto">
-          <div className="w-full max-w-6xl card p-4 sm:p-5 md:p-8 my-auto" style={{ background: "linear-gradient(135deg, rgba(5,20,35,0.95), rgba(14,28,48,0.9))", borderColor: "rgba(16,185,129,0.24)" }}>
+          <div className="w-full max-w-6xl card p-4 sm:p-5 md:p-8 my-auto" style={{ background: "linear-gradient(135deg, rgba(5,20,35,0.84), rgba(14,28,48,0.78))", borderColor: "rgba(16,185,129,0.24)" }}>
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-4 md:gap-5 items-stretch">
               <div className="rounded-2xl border border-white/10 bg-black/15 p-4 sm:p-5 md:p-7 flex flex-col justify-between">
                 <div>
@@ -3290,6 +3298,7 @@ export default function MindShift360() {
             </div>
           </div>
         </div>
+        <p className="absolute right-3 bottom-2 text-[10px] text-white/50 tracking-wide pointer-events-none">Background: NASA / Sam Lott</p>
       </div>
     );
   };
