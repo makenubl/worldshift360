@@ -1523,6 +1523,7 @@ export default function MindShift360() {
   const [otpDebugCode, setOtpDebugCode] = useState("");
   const [otpStatus, setOtpStatus] = useState("idle");
   const [otpMessage, setOtpMessage] = useState("");
+  const [landingAuthMode, setLandingAuthMode] = useState("signup");
 
   // Network stats that grow
   const [networkStats, setNetworkStats] = useState({
@@ -3058,86 +3059,167 @@ export default function MindShift360() {
 
   // ── PAGES ──
 
-  const LandingPage = () => (
-    <div className="h-screen bg-gray-950 text-white overflow-hidden relative">
-      <style>{css}</style>
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle at 8% 12%, rgba(16,185,129,0.12), transparent 44%), radial-gradient(circle at 88% 18%, rgba(59,130,246,0.14), transparent 40%), radial-gradient(circle at 50% 100%, rgba(99,102,241,0.12), transparent 50%)",
-        }}
-      />
-      <div className="relative h-full flex items-center justify-center px-4 py-6">
-        <div className="w-full max-w-5xl card p-6 md:p-9" style={{ background: "linear-gradient(135deg, rgba(5,20,35,0.95), rgba(14,28,48,0.9))", borderColor: "rgba(16,185,129,0.24)" }}>
-          <div className="flex items-center gap-2.5 mb-4">
-            <img
-              src="/rewire-logo-192.png"
-              alt="Rewire logo"
-              className="w-10 h-10 rounded-full object-cover ring-1 ring-blue-400/40 shadow-[0_0_18px_rgba(96,165,250,0.45)]"
-            />
-            <div>
-              <h1 className="text-base font-bold leading-none">Rewire</h1>
-              <p className="text-gray-500 text-xs mt-0.5">Work in progress • coordination layer</p>
+  const LandingPage = () => {
+    const canSendOtp = Boolean(form.name.trim() && form.dob && isValidEmail(form.email));
+    const otpBusy = otpStatus === "sending" || otpStatus === "verifying";
+    const canContinue = canSendOtp && otpStatus === "verified";
+    const isSignup = landingAuthMode === "signup";
+
+    return (
+      <div className="h-screen bg-gray-950 text-white overflow-hidden relative">
+        <style>{css}</style>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at 8% 12%, rgba(16,185,129,0.12), transparent 44%), radial-gradient(circle at 88% 18%, rgba(59,130,246,0.14), transparent 40%), radial-gradient(circle at 50% 100%, rgba(99,102,241,0.12), transparent 50%)",
+          }}
+        />
+        <div className="relative h-full flex items-center justify-center px-4 py-6">
+          <div className="w-full max-w-6xl card p-5 md:p-8" style={{ background: "linear-gradient(135deg, rgba(5,20,35,0.95), rgba(14,28,48,0.9))", borderColor: "rgba(16,185,129,0.24)" }}>
+            <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-5 items-stretch">
+              <div className="rounded-2xl border border-white/10 bg-black/15 p-5 md:p-7 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <img
+                      src="/rewire-logo-192.png"
+                      alt="Rewire logo"
+                      className="w-10 h-10 rounded-full object-cover ring-1 ring-blue-400/40 shadow-[0_0_18px_rgba(96,165,250,0.45)]"
+                    />
+                    <div>
+                      <h1 className="text-base font-bold leading-none">Rewire</h1>
+                      <p className="text-gray-500 text-xs mt-0.5">Work in progress • coordination layer</p>
+                    </div>
+                  </div>
+                  <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-2">New coordination layer for the AI world</p>
+                  <h2 className="text-3xl md:text-5xl font-black leading-[0.98] mb-4">
+                    <span className="block">You wanted to create</span>
+                    <span className="block">a better world</span>
+                    <span className="block text-gradient-multi mt-1">now you can.</span>
+                  </h2>
+                  <p className="text-gray-200 text-sm md:text-base leading-relaxed max-w-2xl mb-4">
+                    AI gives individuals intelligence, compute, and automation. Rewire is where people coordinate outcomes:
+                    create wires, recruit teams, execute missions, and settle value through {JOULE.ticker}.
+                  </p>
+                </div>
+                <p className="text-xl md:text-2xl font-bold leading-tight">
+                  <span className="block">Old social platforms capture attention.</span>
+                  <span className="block text-emerald-300">Rewire coordinates action.</span>
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-gray-950/70 p-5 md:p-6">
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => setLandingAuthMode("signup")}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${isSignup ? "bg-emerald-600 text-white" : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"}`}
+                  >
+                    Sign Up
+                  </button>
+                  <button
+                    onClick={() => setLandingAuthMode("login")}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${!isSignup ? "bg-blue-600 text-white" : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"}`}
+                  >
+                    Login
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-gray-500 text-xs mb-1 block">Name</label>
+                    <input
+                      value={form.name}
+                      onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                      placeholder="Your name"
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-500 text-xs mb-1 block">Email</label>
+                    <input
+                      type="email"
+                      value={form.email || ""}
+                      onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                      placeholder="you@email.com"
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-500 text-xs mb-1 block">Date of Birth</label>
+                    <input
+                      type="date"
+                      max={new Date().toISOString().split("T")[0]}
+                      value={form.dob || ""}
+                      onChange={(event) => setForm((prev) => ({ ...prev, dob: event.target.value }))}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/30"
+                    />
+                  </div>
+                  <button
+                    onClick={requestOtp}
+                    disabled={!canSendOtp || otpBusy}
+                    className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 text-white text-sm rounded-xl transition-all"
+                  >
+                    {otpStatus === "sending" ? "Sending OTP..." : otpStatus === "sent" || otpStatus === "verified" ? "Resend OTP" : "Send OTP"}
+                  </button>
+
+                  {(otpStatus === "sent" || otpStatus === "verified" || otpStatus === "error" || otpStatus === "verifying") && (
+                    <div>
+                      <label className="text-gray-500 text-xs mb-1 block">Email OTP</label>
+                      <div className="flex gap-2">
+                        <input
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={otpInput}
+                          onChange={(event) => setOtpInput(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                          placeholder="6-digit OTP"
+                          className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                        />
+                        <button
+                          onClick={verifyOtp}
+                          disabled={otpInput.trim().length !== 6 || otpBusy}
+                          className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-900 disabled:text-gray-600 text-white text-xs font-medium rounded-xl transition-all"
+                        >
+                          {otpStatus === "verifying" ? "Verifying..." : "Verify"}
+                        </button>
+                      </div>
+                      {otpMessage && (
+                        <p className={`mt-1 text-xs ${otpStatus === "verified" ? "text-emerald-400" : otpStatus === "error" ? "text-red-400" : "text-blue-300"}`}>
+                          {otpMessage}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleOnboard}
+                    disabled={!canContinue}
+                    className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl text-sm hover:from-emerald-500 hover:to-blue-500 disabled:opacity-40 transition-all"
+                  >
+                    {isSignup ? `Sign Up + Claim ${STARTER_JOULE_GRANT} ${JOULE.ticker}` : "Login to Rewire"}
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={handleLandingCreateWire}
+                      className="py-2 border border-white/15 rounded-xl text-xs text-white hover:bg-white/5 transition-all"
+                    >
+                      Create Wire
+                    </button>
+                    <button
+                      onClick={handleLandingJoinWires}
+                      className="py-2 border border-white/15 rounded-xl text-xs text-white hover:bg-white/5 transition-all"
+                    >
+                      Join Wires
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-
-          <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-2">New coordination layer for the AI world</p>
-          <h2 className="text-3xl md:text-5xl font-black leading-[0.98] mb-4">
-            <span className="block">You wanted to create</span>
-            <span className="block">a better world</span>
-            <span className="block text-gradient-multi mt-1">now you can.</span>
-          </h2>
-
-          <p className="text-gray-200 text-sm md:text-base leading-relaxed max-w-3xl mb-4">
-            AI gives individuals intelligence, compute, and automation. Rewire is where people coordinate outcomes:
-            create wires, recruit teams, execute missions, and settle value through {JOULE.ticker}.
-          </p>
-
-          <p className="text-xl md:text-2xl font-bold leading-tight mb-4">
-            <span className="block">Old social platforms capture attention.</span>
-            <span className="block text-emerald-300">Rewire coordinates action.</span>
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-2.5 mb-5">
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/15 p-3">
-              <p className="text-emerald-300 text-[11px] font-semibold uppercase tracking-wider mb-1">Create Wire</p>
-              <p className="text-gray-200 text-xs">Launch a mission like your own startup: objective, checkpoints, and execution team.</p>
-            </div>
-            <div className="rounded-xl border border-blue-500/20 bg-blue-950/15 p-3">
-              <p className="text-blue-300 text-[11px] font-semibold uppercase tracking-wider mb-1">Join Wire</p>
-              <p className="text-gray-200 text-xs">Contribute skills, ship proof, and build credibility in live strategy arenas.</p>
-            </div>
-            <div className="rounded-xl border border-purple-500/20 bg-purple-950/15 p-3">
-              <p className="text-purple-300 text-[11px] font-semibold uppercase tracking-wider mb-1">Joule Economy</p>
-              <p className="text-gray-200 text-xs">Escrow, verification, and rewards run in one integrated treasury flow.</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2.5">
-            <button
-              onClick={handleLandingCreateWire}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm font-semibold hover:from-emerald-500 hover:to-blue-500 transition-all"
-            >
-              Create Your Wire Now
-            </button>
-            <button
-              onClick={handleLandingJoinWires}
-              className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/5 text-white text-sm font-medium hover:bg-white/10 transition-all"
-            >
-              Join Wires
-            </button>
-            <button
-              onClick={handleLandingWatchLive}
-              className="px-5 py-2.5 rounded-xl border border-gray-700 bg-gray-900/70 text-gray-200 text-sm hover:border-gray-500 hover:text-white transition-all"
-            >
-              Enter Platform
-            </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const FeedPage = () => {
     const allPosts = [...communityPosts, ...FEED_POSTS];
