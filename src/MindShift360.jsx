@@ -523,6 +523,11 @@ const JOULE = {
   thesis: "Intelligence + compute + hardware execution",
 };
 
+const STARTER_JOULE_GRANT = 220;
+const INVITE_JOIN_BONUS = 30;
+const MIN_MISSION_REWARD_JOU = 40;
+const MAX_MISSION_REWARD_JOU = 800;
+
 const STRATEGY_COMPETITIONS = [
   {
     id: "arena_food_water",
@@ -1318,6 +1323,85 @@ const formatActivityAge = (ageSec) => {
   return `${Math.floor(ageSec / 60)}m ago`;
 };
 
+const createMissionInviteCode = (title = "mission") => {
+  const slug = title.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 4) || "MSN";
+  const nonce = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `${slug}-${nonce}`;
+};
+
+const getMissionRewardJou = (mission) => {
+  if (Number.isFinite(mission?.rewardJou)) {
+    return clamp(Math.round(mission.rewardJou), MIN_MISSION_REWARD_JOU, MAX_MISSION_REWARD_JOU);
+  }
+  if (Number.isFinite(mission?.rewardUsd)) {
+    return clamp(Math.round(mission.rewardUsd * 1.6), MIN_MISSION_REWARD_JOU, MAX_MISSION_REWARD_JOU);
+  }
+  return 120;
+};
+
+const buildSeedMissionThreads = () => {
+  const byMission = Object.fromEntries(
+    SEED_MISSIONS.map((mission) => [
+      mission.id,
+      [
+        {
+          id: `${mission.id}_ai_boot`,
+          role: "ai",
+          user: { name: "Rewire AI Ops", avatar: "🤖" },
+          text: `AI kickoff: ${mission.title}. Priority action is to ship one measurable deliverable in the next 24h.`,
+          time: "live",
+          likes: 0,
+        },
+      ],
+    ]),
+  );
+
+  SEED_MISSION_PROOFS.forEach((proof) => {
+    if (!byMission[proof.missionId]) byMission[proof.missionId] = [];
+    byMission[proof.missionId].push({
+      id: `${proof.id}_thread`,
+      role: "member",
+      user: { name: proof.userName, avatar: proof.avatar },
+      text: proof.proof,
+      time: proof.time,
+      likes: randomRange(4, 29),
+    });
+  });
+
+  return byMission;
+};
+
+const buildSeedAllianceThreads = () =>
+  Object.fromEntries(
+    SEED_ALLIANCES.map((alliance) => [
+      alliance.id,
+      [
+        {
+          id: `${alliance.id}_ai_ops`,
+          role: "ai",
+          user: { name: "Rewire AI Coordinator", avatar: "🧠" },
+          text: `AI action board is live for ${alliance.name}. Members should post measurable updates with location + impact.`,
+          time: "live",
+          likes: 0,
+        },
+        ...(alliance.discussion || []).map((message, index) => ({
+          id: `${alliance.id}_seed_${index}`,
+          role: "member",
+          user: message.user,
+          text: message.text,
+          time: message.time,
+          likes: message.likes || 0,
+        })),
+      ],
+    ]),
+  );
+
+const createMissionAiReply = (mission, actorName) =>
+  `AI next action: ${actorName} now owns checkpoint 1 for "${mission.title}". Submit proof with metrics to unlock treasury release.`;
+
+const createAllianceAiReply = (alliance, actorName) =>
+  `AI directive: ${actorName}, align your next action with ${alliance.name}'s commitments and publish one measurable outcome in 24h.`;
+
 const normalizeLiveEvent = (event) => ({
   id: event?.id || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
   name: event?.name || "Guest",
@@ -1413,7 +1497,7 @@ export default function MindShift360() {
   const [selectedAlliance, setSelectedAlliance] = useState(null);
   const [showCreateAlliance, setShowCreateAlliance] = useState(false);
   const [joinedAlliances, setJoinedAlliances] = useState(new Set());
-  const [allianceComment, setAllianceComment] = useState("");
+  const [allianceCommentInputs, setAllianceCommentInputs] = useState({});
   const [newAlliance, setNewAlliance] = useState({
     name: "",
     worldVision: "",
@@ -1421,12 +1505,29 @@ export default function MindShift360() {
     commitments: ["", "", ""],
   });
   const [userAlliances, setUserAlliances] = useState([]);
+  const [allianceThreads, setAllianceThreads] = useState(() => buildSeedAllianceThreads());
   const [routineStep, setRoutineStep] = useState(-1);
   const [routineAnswers, setRoutineAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [missionState, setMissionState] = useState({});
   const [missionProofInputs, setMissionProofInputs] = useState({});
   const [missionProofFeed, setMissionProofFeed] = useState(SEED_MISSION_PROOFS);
+  const [missionThreads, setMissionThreads] = useState(() => buildSeedMissionThreads());
+  const [missionCommentInputs, setMissionCommentInputs] = useState({});
+  const [userMissions, setUserMissions] = useState([]);
+  const [showMissionBuilder, setShowMissionBuilder] = useState(false);
+  const [missionDraft, setMissionDraft] = useState({
+    title: "",
+    summary: "",
+    deliverables: ["", "", ""],
+    effort: "3-5 hours",
+    rewardJou: 120,
+    allianceId: "a5",
+  });
+  const [inviteCodeInput, setInviteCodeInput] = useState("");
+  const [lastInviteCode, setLastInviteCode] = useState("");
+  const [walletJoules, setWalletJoules] = useState(0);
+  const [starterGrantIssued, setStarterGrantIssued] = useState(false);
   const [strategyBattles, setStrategyBattles] = useState(STRATEGY_COMPETITIONS);
   const [strategySupport, setStrategySupport] = useState({});
   const [allocationAmount, setAllocationAmount] = useState(50);
@@ -1555,6 +1656,11 @@ export default function MindShift360() {
       const savedUserAlliances = localStorage.getItem("rewire_user_alliances");
       const savedMissionState = localStorage.getItem("rewire_mission_state");
       const savedMissionProofFeed = localStorage.getItem("rewire_mission_proof_feed");
+      const savedMissionThreads = localStorage.getItem("rewire_mission_threads");
+      const savedAllianceThreads = localStorage.getItem("rewire_alliance_threads");
+      const savedUserMissions = localStorage.getItem("rewire_user_missions");
+      const savedWalletJoules = localStorage.getItem("rewire_wallet_joules");
+      const savedStarterGrantIssued = localStorage.getItem("rewire_starter_grant_issued");
       const savedStrategyBattles = localStorage.getItem("rewire_strategy_battles");
       const savedStrategySupport = localStorage.getItem("rewire_strategy_support");
       const savedAllocationAmount = localStorage.getItem("rewire_allocation_amount");
@@ -1564,12 +1670,22 @@ export default function MindShift360() {
       if (savedUserAlliances) setUserAlliances(JSON.parse(savedUserAlliances));
       if (savedMissionState) setMissionState(JSON.parse(savedMissionState));
       if (savedMissionProofFeed) setMissionProofFeed(JSON.parse(savedMissionProofFeed));
+      if (savedMissionThreads) setMissionThreads(JSON.parse(savedMissionThreads));
+      if (savedAllianceThreads) setAllianceThreads(JSON.parse(savedAllianceThreads));
+      if (savedUserMissions) setUserMissions(JSON.parse(savedUserMissions));
+      if (savedWalletJoules !== null) setWalletJoules(Number(savedWalletJoules) || 0);
+      if (savedStarterGrantIssued !== null) setStarterGrantIssued(savedStarterGrantIssued === "1");
       if (savedStrategyBattles) setStrategyBattles(JSON.parse(savedStrategyBattles));
       if (savedStrategySupport) setStrategySupport(JSON.parse(savedStrategySupport));
       if (savedAllocationAmount) setAllocationAmount(Number(savedAllocationAmount));
     } catch {
       setMissionState({});
       setMissionProofFeed(SEED_MISSION_PROOFS);
+      setMissionThreads(buildSeedMissionThreads());
+      setAllianceThreads(buildSeedAllianceThreads());
+      setUserMissions([]);
+      setWalletJoules(0);
+      setStarterGrantIssued(false);
       setStrategyBattles(STRATEGY_COMPETITIONS);
       setStrategySupport({});
       setAllocationAmount(50);
@@ -1602,6 +1718,31 @@ export default function MindShift360() {
     if (!hydrated) return;
     localStorage.setItem("rewire_mission_proof_feed", JSON.stringify(missionProofFeed));
   }, [hydrated, missionProofFeed]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_mission_threads", JSON.stringify(missionThreads));
+  }, [hydrated, missionThreads]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_alliance_threads", JSON.stringify(allianceThreads));
+  }, [hydrated, allianceThreads]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_user_missions", JSON.stringify(userMissions));
+  }, [hydrated, userMissions]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_wallet_joules", String(walletJoules));
+  }, [hydrated, walletJoules]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_starter_grant_issued", starterGrantIssued ? "1" : "0");
+  }, [hydrated, starterGrantIssued]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1746,6 +1887,61 @@ export default function MindShift360() {
   }, [totalQi]);
 
   const allAlliances = useMemo(() => [...SEED_ALLIANCES, ...userAlliances], [userAlliances]);
+  const allMissions = useMemo(() => [...userMissions, ...SEED_MISSIONS], [userMissions]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setAllianceThreads((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      allAlliances.forEach((alliance) => {
+        if (!next[alliance.id]) {
+          changed = true;
+          next[alliance.id] = [
+            {
+              id: `${alliance.id}_boot_ai`,
+              role: "ai",
+              user: { name: "Rewire AI Coordinator", avatar: "🧠" },
+              text: `AI action board initialized for ${alliance.name}. Post one measurable output to activate coordination score.`,
+              time: "live",
+              likes: 0,
+            },
+          ];
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [allAlliances, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    setMissionThreads((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      allMissions.forEach((mission) => {
+        if (!next[mission.id]) {
+          changed = true;
+          next[mission.id] = [
+            {
+              id: `${mission.id}_boot_ai`,
+              role: "ai",
+              user: { name: "Rewire AI Ops", avatar: "🤖" },
+              text: `Mission "${mission.title}" is live. Claim role, execute one deliverable, and log proof for treasury release.`,
+              time: "live",
+              likes: 0,
+            },
+          ];
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [allMissions, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated || !profile || starterGrantIssued) return;
+    setWalletJoules((current) => current + STARTER_JOULE_GRANT);
+    setStarterGrantIssued(true);
+  }, [hydrated, profile, starterGrantIssued]);
 
   const answerQuestion = useCallback(
     (qi) => {
@@ -1784,10 +1980,207 @@ export default function MindShift360() {
     };
 
     setUserAlliances((prev) => [alliance, ...prev]);
+    setAllianceThreads((prev) => ({
+      ...prev,
+      [alliance.id]: [
+        {
+          id: `${alliance.id}_launch_ai`,
+          role: "ai",
+          user: { name: "Rewire AI Coordinator", avatar: "🧠" },
+          text: `Alliance launched. Define one measurable objective and assign owners within 24h.`,
+          time: "just now",
+          likes: 0,
+        },
+      ],
+    }));
+    setJoinedAlliances((prev) => new Set([...prev, alliance.id]));
     setShowCreateAlliance(false);
     setNewAlliance({ name: "", worldVision: "", philosophy: "", commitments: ["", "", ""] });
     setSelectedAlliance(alliance.id);
   }, [newAlliance, profile]);
+
+  const updateMissionDraftDeliverable = useCallback((index, value) => {
+    setMissionDraft((draft) => {
+      const nextDeliverables = [...draft.deliverables];
+      nextDeliverables[index] = value;
+      return { ...draft, deliverables: nextDeliverables };
+    });
+  }, []);
+
+  const handleCreateMission = useCallback(() => {
+    if (!profile) {
+      setShowOnboard(true);
+      return;
+    }
+
+    const title = missionDraft.title.trim();
+    const summary = missionDraft.summary.trim();
+    const deliverables = missionDraft.deliverables.map((item) => item.trim()).filter(Boolean);
+    const rewardJou = clamp(Number(missionDraft.rewardJou) || 0, MIN_MISSION_REWARD_JOU, MAX_MISSION_REWARD_JOU);
+
+    if (!title || !summary || deliverables.length < 2) return;
+
+    const escrowStake = Math.max(20, Math.round(rewardJou * 0.3));
+    if (walletJoules < escrowStake) return;
+
+    const inviteCode = createMissionInviteCode(title);
+    const createdAt = Date.now();
+    const missionId = `um_${createdAt}`;
+    const mission = {
+      id: missionId,
+      allianceId: missionDraft.allianceId || "a5",
+      title,
+      summary,
+      deliverables,
+      effort: missionDraft.effort || "3-5 hours",
+      rewardUsd: Math.max(35, Math.round(rewardJou * 0.62)),
+      rewardPoints: Math.max(90, Math.round(rewardJou * 1.8)),
+      rewardJou,
+      participants: 1,
+      urgency: "high",
+      inviteCode,
+      createdBy: profile.name,
+    };
+
+    setWalletJoules((current) => Math.max(0, current - escrowStake));
+    setUserMissions((prev) => [mission, ...prev]);
+    setMissionState((prev) => ({
+      ...prev,
+      [mission.id]: { status: "joined", joinedAt: createdAt, proof: "", submittedAt: null, rewardedAt: null },
+    }));
+    setMissionThreads((prev) => ({
+      ...prev,
+      [mission.id]: [
+        {
+          id: `${mission.id}_ai_launch`,
+          role: "ai",
+          user: { name: "Rewire AI Ops", avatar: "🤖" },
+          text: `Mission launched. Escrow locked: ${escrowStake} ${JOULE.ticker}. Share invite code ${inviteCode} to recruit execution partners.`,
+          time: "just now",
+          likes: 0,
+        },
+        {
+          id: `${mission.id}_founder`,
+          role: "member",
+          user: { name: profile.name, avatar: AVATARS[(profile.name?.length || 0) % AVATARS.length] },
+          text: `I launched "${title}". First checkpoint opens now — looking for builders who can ship in 7 days.`,
+          time: "just now",
+          likes: 0,
+        },
+      ],
+    }));
+
+    if (mission.allianceId) {
+      setJoinedAlliances((prev) => (prev.has(mission.allianceId) ? prev : new Set([...prev, mission.allianceId])));
+    }
+
+    setMissionDraft({
+      title: "",
+      summary: "",
+      deliverables: ["", "", ""],
+      effort: "3-5 hours",
+      rewardJou: 120,
+      allianceId: missionDraft.allianceId || "a5",
+    });
+    setShowMissionBuilder(false);
+    setLastInviteCode(inviteCode);
+    setInviteCodeInput(inviteCode);
+    setNetworkStats((stats) => ({ ...stats, interactions: stats.interactions + 2, accuracy: Math.min(99, stats.accuracy + 0.002) }));
+  }, [missionDraft, profile, walletJoules]);
+
+  const copyMissionInviteLink = useCallback(async (inviteCode) => {
+    if (!inviteCode || typeof window === "undefined") return;
+    const link = `${window.location.origin}?invite=${encodeURIComponent(inviteCode)}`;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      }
+      setLastInviteCode(inviteCode);
+    } catch {
+      setLastInviteCode(inviteCode);
+    }
+  }, []);
+
+  const postAllianceComment = useCallback(
+    (alliance) => {
+      if (!profile) {
+        setShowOnboard(true);
+        return;
+      }
+      const text = allianceCommentInputs[alliance.id]?.trim();
+      if (!text) return;
+      const now = Date.now();
+      setAllianceThreads((prev) => {
+        const existing = prev[alliance.id] || [];
+        return {
+          ...prev,
+          [alliance.id]: [
+            {
+              id: `${alliance.id}_user_${now}`,
+              role: "member",
+              user: { name: profile.name, avatar: AVATARS[(profile.name?.length || 0) % AVATARS.length] },
+              text,
+              time: "just now",
+              likes: 0,
+            },
+            {
+              id: `${alliance.id}_ai_${now}`,
+              role: "ai",
+              user: { name: "Rewire AI Coordinator", avatar: "🧠" },
+              text: createAllianceAiReply(alliance, profile.name),
+              time: "just now",
+              likes: 0,
+            },
+            ...existing,
+          ].slice(0, 20),
+        };
+      });
+      setAllianceCommentInputs((prev) => ({ ...prev, [alliance.id]: "" }));
+      setNetworkStats((stats) => ({ ...stats, interactions: stats.interactions + 1, accuracy: Math.min(99, stats.accuracy + 0.001) }));
+    },
+    [allianceCommentInputs, profile],
+  );
+
+  const postMissionComment = useCallback(
+    (mission) => {
+      if (!profile) {
+        setShowOnboard(true);
+        return;
+      }
+      if (!missionState[mission.id]) return;
+      const text = missionCommentInputs[mission.id]?.trim();
+      if (!text) return;
+      const now = Date.now();
+      setMissionThreads((prev) => {
+        const existing = prev[mission.id] || [];
+        return {
+          ...prev,
+          [mission.id]: [
+            {
+              id: `${mission.id}_comment_${now}`,
+              role: "member",
+              user: { name: profile.name, avatar: AVATARS[(profile.name?.length || 0) % AVATARS.length] },
+              text,
+              time: "just now",
+              likes: 0,
+            },
+            {
+              id: `${mission.id}_comment_ai_${now}`,
+              role: "ai",
+              user: { name: "Rewire AI Ops", avatar: "🤖" },
+              text: createMissionAiReply(mission, profile.name),
+              time: "just now",
+              likes: 0,
+            },
+            ...existing,
+          ].slice(0, 22),
+        };
+      });
+      setMissionCommentInputs((prev) => ({ ...prev, [mission.id]: "" }));
+      setNetworkStats((stats) => ({ ...stats, interactions: stats.interactions + 1, accuracy: Math.min(99, stats.accuracy + 0.001) }));
+    },
+    [missionCommentInputs, missionState, profile],
+  );
 
   const missionSummary = useMemo(() => {
     let joined = 0;
@@ -1795,21 +2188,23 @@ export default function MindShift360() {
     let rewarded = 0;
     let totalUsd = 0;
     let totalPoints = 0;
+    let totalJou = 0;
 
-    SEED_MISSIONS.forEach((mission) => {
+    allMissions.forEach((mission) => {
       const state = missionState[mission.id];
       if (!state) return;
       joined += 1;
       if (state.status === "submitted" || state.status === "rewarded") submitted += 1;
       if (state.status === "rewarded") {
         rewarded += 1;
-        totalUsd += mission.rewardUsd;
-        totalPoints += mission.rewardPoints;
+        totalUsd += mission.rewardUsd || 0;
+        totalPoints += mission.rewardPoints || 0;
+        totalJou += getMissionRewardJou(mission);
       }
     });
 
-    return { joined, submitted, rewarded, totalUsd, totalPoints };
-  }, [missionState]);
+    return { joined, submitted, rewarded, totalUsd, totalPoints, totalJou };
+  }, [allMissions, missionState]);
 
   const treasuryFlow = useMemo(() => {
     const treasuryLocked = strategyBattles.reduce((sum, battle) => sum + battle.sideA.treasury + battle.sideB.treasury, 0);
@@ -1884,11 +2279,14 @@ export default function MindShift360() {
   );
 
   const joinMission = useCallback(
-    (mission) => {
+    (mission, source = "direct") => {
       if (!profile) {
         setShowOnboard(true);
         return;
       }
+      const alreadyJoined = Boolean(missionState[mission.id]);
+      if (alreadyJoined) return;
+
       setMissionState((prev) => {
         if (prev[mission.id]) return prev;
         return {
@@ -1896,14 +2294,66 @@ export default function MindShift360() {
           [mission.id]: { status: "joined", joinedAt: Date.now(), proof: "", submittedAt: null, rewardedAt: null },
         };
       });
+
+      setWalletJoules((current) => current + (source === "invite" ? INVITE_JOIN_BONUS : Math.floor(INVITE_JOIN_BONUS / 2)));
       setJoinedAlliances((prev) => {
-        if (prev.has(mission.allianceId)) return prev;
+        if (!mission.allianceId || prev.has(mission.allianceId)) return prev;
         return new Set([...prev, mission.allianceId]);
+      });
+      setMissionThreads((prev) => {
+        const existing = prev[mission.id] || [];
+        return {
+          ...prev,
+          [mission.id]: [
+            {
+              id: `${mission.id}_join_${Date.now()}`,
+              role: "member",
+              user: { name: profile.name, avatar: AVATARS[(profile.name?.length || 0) % AVATARS.length] },
+              text: `Joined mission execution. ${source === "invite" ? `Invite accepted (+${INVITE_JOIN_BONUS} ${JOULE.ticker}).` : "Ready for first checkpoint."}`,
+              time: "just now",
+              likes: 0,
+            },
+            {
+              id: `${mission.id}_ai_join_${Date.now()}`,
+              role: "ai",
+              user: { name: "Rewire AI Ops", avatar: "🤖" },
+              text: createMissionAiReply(mission, profile.name),
+              time: "just now",
+              likes: 0,
+            },
+            ...existing,
+          ].slice(0, 16),
+        };
       });
       setNetworkStats((stats) => ({ ...stats, interactions: stats.interactions + 1 }));
     },
-    [profile],
+    [missionState, profile],
   );
+
+  const joinMissionByInvite = useCallback(() => {
+    const code = inviteCodeInput.trim().toUpperCase();
+    if (!code) return;
+    const mission = allMissions.find((item) => item.inviteCode?.toUpperCase() === code);
+    if (!mission) return;
+    joinMission(mission, "invite");
+    setInviteCodeInput("");
+  }, [allMissions, inviteCodeInput, joinMission]);
+
+  useEffect(() => {
+    if (!hydrated || !profile || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const inviteCode = url.searchParams.get("invite");
+    if (!inviteCode) return;
+    const normalized = inviteCode.trim().toUpperCase();
+    if (!normalized) return;
+    const mission = allMissions.find((item) => item.inviteCode?.toUpperCase() === normalized);
+    if (!mission || missionState[mission.id]) return;
+
+    joinMission(mission, "invite");
+    setInviteCodeInput(normalized);
+    url.searchParams.delete("invite");
+    window.history.replaceState({}, "", `${url.pathname}${url.search ? url.search : ""}${url.hash || ""}`);
+  }, [allMissions, hydrated, joinMission, missionState, profile]);
 
   const submitMissionProof = useCallback(
     (mission) => {
@@ -1931,6 +2381,31 @@ export default function MindShift360() {
         },
         ...prev,
       ]);
+      setMissionThreads((prev) => {
+        const existing = prev[mission.id] || [];
+        return {
+          ...prev,
+          [mission.id]: [
+            {
+              id: `${mission.id}_proof_${now}`,
+              role: "member",
+              user: { name: profile.name, avatar: AVATARS[(profile.name?.length || 0) % AVATARS.length] },
+              text: proof,
+              time: "just now",
+              likes: 0,
+            },
+            {
+              id: `${mission.id}_ai_verify_${now}`,
+              role: "ai",
+              user: { name: "Rewire AI Verifier", avatar: "🧠" },
+              text: `AI verification running for ${mission.title}. If metrics pass, reward escrow will unlock automatically.`,
+              time: "just now",
+              likes: 0,
+            },
+            ...existing,
+          ].slice(0, 18),
+        };
+      });
       setNetworkStats((stats) => ({
         ...stats,
         interactions: stats.interactions + 2,
@@ -1944,13 +2419,33 @@ export default function MindShift360() {
     (mission) => {
       const state = missionState[mission.id];
       if (!state || state.status !== "submitted") return;
+      const rewardJou = getMissionRewardJou(mission);
       setMissionState((prev) => ({
         ...prev,
         [mission.id]: { ...prev[mission.id], status: "rewarded", rewardedAt: Date.now() },
       }));
+      setWalletJoules((current) => current + rewardJou);
+      setMissionThreads((prev) => {
+        const now = Date.now();
+        const existing = prev[mission.id] || [];
+        return {
+          ...prev,
+          [mission.id]: [
+            {
+              id: `${mission.id}_ai_reward_${now}`,
+              role: "ai",
+              user: { name: "Rewire Treasury AI", avatar: "💠" },
+              text: `Reward settled: +${rewardJou} ${JOULE.ticker} to ${profile?.name || "builder"} for verified mission proof.`,
+              time: "just now",
+              likes: 0,
+            },
+            ...existing,
+          ].slice(0, 18),
+        };
+      });
       setNetworkStats((stats) => ({ ...stats, interactions: stats.interactions + 1 }));
     },
-    [missionState],
+    [missionState, profile?.name],
   );
 
   // Advisory
@@ -2993,7 +3488,9 @@ export default function MindShift360() {
           style={{ background: "rgba(17,24,39,0.95)" }}
         >
           <h2 className="text-white text-xl font-bold mb-1">Join the Collective 🌍</h2>
-          <p className="text-gray-400 text-sm mb-5">Your profile makes the intelligence smarter for everyone.</p>
+          <p className="text-gray-400 text-sm mb-5">
+            Your profile makes the intelligence smarter for everyone. New members receive {STARTER_JOULE_GRANT} {JOULE.ticker} starter balance.
+          </p>
           <div className="space-y-3">
             <div>
               <label className="text-gray-500 text-xs mb-1 block">Name</label>
@@ -3126,7 +3623,7 @@ export default function MindShift360() {
               disabled={!form.name.trim()}
               className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl text-sm hover:from-emerald-500 hover:to-blue-500 disabled:opacity-40 transition-all"
             >
-              Join {networkStats.minds.toLocaleString()}+ Minds
+              Join + Claim {STARTER_JOULE_GRANT} {JOULE.ticker}
             </button>
           </div>
         </div>
@@ -3797,6 +4294,7 @@ export default function MindShift360() {
             {allAlliances.map((a) => {
               const isOpen = selectedAlliance === a.id;
               const isJoined = joinedAlliances.has(a.id);
+              const discussion = allianceThreads[a.id] || [];
               return (
                 <div
                   key={a.id}
@@ -3893,43 +4391,51 @@ export default function MindShift360() {
                         </button>
                       )}
 
-                      {a.discussion?.length > 0 && (
-                        <div className="pt-3 border-t border-gray-800/50">
-                          <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Alliance Discussion</span>
-                          <div className="mt-2 space-y-2.5">
-                            {a.discussion.map((msg, i) => (
-                              <div key={i} className="flex gap-2.5">
-                                <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-sm flex-shrink-0">
-                                  {msg.user.avatar}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-white text-xs font-medium">{msg.user.name}</span>
-                                    <span className="text-gray-700 text-xs">{msg.time}</span>
-                                  </div>
-                                  <p className="text-gray-300 text-xs leading-relaxed mt-0.5">{msg.text}</p>
-                                  <button className="text-gray-600 text-xs hover:text-emerald-400 transition-colors mt-1 flex items-center gap-1">
-                                    <ThumbsUp size={10} /> {msg.likes}
-                                  </button>
-                                </div>
+                      <div className="pt-3 border-t border-gray-800/50">
+                        <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Alliance Discussion + AI Actions</span>
+                        <div className="mt-2 space-y-2.5">
+                          {discussion.slice(0, 5).map((msg) => (
+                            <div key={msg.id} className="flex gap-2.5">
+                              <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center text-sm flex-shrink-0">
+                                {msg.user.avatar}
                               </div>
-                            ))}
-                          </div>
-                          {profile && isJoined && (
-                            <div className="flex gap-2 mt-3">
-                              <input
-                                value={allianceComment}
-                                onChange={(e) => setAllianceComment(e.target.value)}
-                                placeholder="Share your thoughts or ask the alliance..."
-                                className="flex-1 bg-gray-900/50 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
-                              />
-                              <button className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs hover:bg-emerald-500 transition-all">
-                                <Send size={12} />
-                              </button>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-white text-xs font-medium">{msg.user.name}</span>
+                                  {msg.role === "ai" && (
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/15 text-blue-300 border border-blue-500/20">
+                                      AI
+                                    </span>
+                                  )}
+                                  <span className="text-gray-700 text-xs">{msg.time}</span>
+                                </div>
+                                <p className="text-gray-300 text-xs leading-relaxed mt-0.5">{msg.text}</p>
+                                <button className="text-gray-600 text-xs hover:text-emerald-400 transition-colors mt-1 flex items-center gap-1">
+                                  <ThumbsUp size={10} /> {msg.likes}
+                                </button>
+                              </div>
                             </div>
-                          )}
+                          ))}
                         </div>
-                      )}
+                        {profile && isJoined && (
+                          <div className="flex gap-2 mt-3">
+                            <input
+                              value={allianceCommentInputs[a.id] || ""}
+                              onChange={(e) => setAllianceCommentInputs((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                              onKeyDown={(event) => event.key === "Enter" && postAllianceComment(a)}
+                              placeholder="Post update. AI will convert it into next action."
+                              className="flex-1 bg-gray-900/50 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                            />
+                            <button
+                              onClick={() => postAllianceComment(a)}
+                              disabled={!allianceCommentInputs[a.id]?.trim()}
+                              className="px-3 py-2 bg-emerald-600 disabled:bg-gray-800 disabled:text-gray-600 text-white rounded-xl text-xs hover:bg-emerald-500 transition-all"
+                            >
+                              <Send size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -3943,19 +4449,19 @@ export default function MindShift360() {
             <div>
               <h2 className="text-white font-bold text-base flex items-center gap-2">
                 <Briefcase size={15} className="text-emerald-400" />
-                Alliance Missions (7-Day Outcomes)
+                Mission Launchpad (Create + Invite)
               </h2>
               <p className="text-gray-500 text-xs">
-                This is the practical layer: join a mission, ship proof, claim reward, build public reputation.
+                Build a mission, invite execution partners, coordinate with AI, and settle rewards in {JOULE.ticker}.
               </p>
             </div>
             <div className="text-right">
-              <p className="text-emerald-400 text-xs font-mono">{missionSummary.rewarded} rewards claimed</p>
-              <p className="text-gray-500 text-xs">${missionSummary.totalUsd.toLocaleString()} unlocked</p>
+              <p className="text-emerald-300 text-xs font-mono">{walletJoules.toLocaleString()} {JOULE.ticker}</p>
+              <p className="text-gray-500 text-xs">{missionSummary.rewarded} rewards claimed</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
             <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-2.5">
               <p className="text-gray-500 text-[11px] uppercase tracking-wider">Joined</p>
               <p className="text-white text-sm font-mono">{missionSummary.joined}</p>
@@ -3965,23 +4471,162 @@ export default function MindShift360() {
               <p className="text-blue-300 text-sm font-mono">{missionSummary.submitted}</p>
             </div>
             <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-2.5">
-              <p className="text-gray-500 text-[11px] uppercase tracking-wider">Rewards</p>
+              <p className="text-gray-500 text-[11px] uppercase tracking-wider">USD Rewards</p>
               <p className="text-emerald-300 text-sm font-mono">${missionSummary.totalUsd.toLocaleString()}</p>
             </div>
             <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-2.5">
-              <p className="text-gray-500 text-[11px] uppercase tracking-wider">Rewire Points</p>
+              <p className="text-gray-500 text-[11px] uppercase tracking-wider">JOU Settled</p>
+              <p className="text-cyan-300 text-sm font-mono">{missionSummary.totalJou.toLocaleString()}</p>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-2.5">
+              <p className="text-gray-500 text-[11px] uppercase tracking-wider">Points</p>
               <p className="text-purple-300 text-sm font-mono">{missionSummary.totalPoints.toLocaleString()}</p>
             </div>
           </div>
 
+          <div className="rounded-xl border border-gray-800 bg-gray-900/45 p-3 mb-3">
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Join by Invite</p>
+            <div className="flex gap-2">
+              <input
+                value={inviteCodeInput}
+                onChange={(event) => setInviteCodeInput(event.target.value.toUpperCase())}
+                placeholder="Paste invite code (e.g., FARM-A2D4)"
+                className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+              />
+              <button
+                onClick={joinMissionByInvite}
+                disabled={!inviteCodeInput.trim()}
+                className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs font-semibold transition-all"
+              >
+                Join
+              </button>
+            </div>
+            {lastInviteCode && (
+              <p className="text-emerald-300 text-[11px] mt-2">
+                Last invite: {lastInviteCode} {profile ? `(share link copied on demand)` : ""}
+              </p>
+            )}
+          </div>
+
+          {profile ? (
+            <div className="rounded-xl border border-gray-800 bg-gray-900/45 p-3 mb-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-gray-300 text-xs font-semibold uppercase tracking-wider">Create Mission</p>
+                <button
+                  onClick={() => setShowMissionBuilder((prev) => !prev)}
+                  className="px-2.5 py-1 rounded-lg text-xs bg-emerald-600 hover:bg-emerald-500 text-white transition-all"
+                >
+                  {showMissionBuilder ? "Hide Builder" : "Open Builder"}
+                </button>
+              </div>
+
+              {showMissionBuilder && (
+                <div className="mt-3 space-y-2.5">
+                  <input
+                    value={missionDraft.title}
+                    onChange={(event) => setMissionDraft((draft) => ({ ...draft, title: event.target.value }))}
+                    placeholder="Mission title"
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                  />
+                  <textarea
+                    value={missionDraft.summary}
+                    onChange={(event) => setMissionDraft((draft) => ({ ...draft, summary: event.target.value }))}
+                    placeholder="Mission objective and expected measurable outcome"
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30 resize-none min-h-[66px]"
+                  />
+                  <div className="grid md:grid-cols-2 gap-2">
+                    <select
+                      value={missionDraft.allianceId}
+                      onChange={(event) => setMissionDraft((draft) => ({ ...draft, allianceId: event.target.value }))}
+                      className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30"
+                    >
+                      {allAlliances.map((alliance) => (
+                        <option key={alliance.id} value={alliance.id} className="bg-gray-900">
+                          {alliance.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={missionDraft.effort}
+                      onChange={(event) => setMissionDraft((draft) => ({ ...draft, effort: event.target.value }))}
+                      className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30"
+                    >
+                      {["2-3 hours", "3-5 hours", "5-8 hours", "8-12 hours"].map((effort) => (
+                        <option key={effort} value={effort} className="bg-gray-900">
+                          {effort}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {missionDraft.deliverables.map((deliverable, index) => (
+                    <input
+                      key={index}
+                      value={deliverable}
+                      onChange={(event) => updateMissionDraftDeliverable(index, event.target.value)}
+                      placeholder={`Deliverable ${index + 1}`}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                    />
+                  ))}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-gray-500 text-[11px] uppercase tracking-wider">Reward Pool ({JOULE.ticker})</span>
+                      <span className="text-cyan-300 text-xs font-mono">{Math.round(missionDraft.rewardJou)} {JOULE.ticker}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={MIN_MISSION_REWARD_JOU}
+                      max={MAX_MISSION_REWARD_JOU}
+                      step={10}
+                      value={missionDraft.rewardJou}
+                      onChange={(event) =>
+                        setMissionDraft((draft) => ({ ...draft, rewardJou: Number(event.target.value) }))
+                      }
+                      className="w-full accent-emerald-500"
+                    />
+                    <p className="text-gray-500 text-[11px] mt-1">
+                      Escrow lock on launch: {Math.max(20, Math.round((Number(missionDraft.rewardJou) || 0) * 0.3))} {JOULE.ticker}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleCreateMission}
+                    disabled={
+                      !missionDraft.title.trim() ||
+                      !missionDraft.summary.trim() ||
+                      missionDraft.deliverables.filter((item) => item.trim()).length < 2 ||
+                      walletJoules < Math.max(20, Math.round((Number(missionDraft.rewardJou) || 0) * 0.3))
+                    }
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-sm font-semibold transition-all"
+                  >
+                    Launch Mission + Generate Invite
+                  </button>
+                  {walletJoules < Math.max(20, Math.round((Number(missionDraft.rewardJou) || 0) * 0.3)) && (
+                    <p className="text-red-300 text-[11px]">
+                      You need more {JOULE.ticker} in wallet to launch this reward pool.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowOnboard(true)}
+              className="w-full mb-3 py-2 bg-gray-800 text-gray-300 rounded-xl text-sm hover:bg-gray-700 transition-all"
+            >
+              Join to create missions and receive starter {STARTER_JOULE_GRANT} {JOULE.ticker}
+            </button>
+          )}
+
           <div className="space-y-3">
-            {SEED_MISSIONS.map((mission) => {
+            {allMissions.map((mission) => {
               const missionProgress = missionState[mission.id];
               const alliance = allAlliances.find((item) => item.id === mission.allianceId);
               const proofText = missionProofInputs[mission.id] || "";
+              const missionChatInput = missionCommentInputs[mission.id] || "";
+              const missionThread = missionThreads[mission.id] || [];
               const hasJoined = Boolean(missionProgress);
               const hasSubmitted = missionProgress?.status === "submitted" || missionProgress?.status === "rewarded";
               const isRewarded = missionProgress?.status === "rewarded";
+              const rewardJou = getMissionRewardJou(mission);
               return (
                 <div
                   key={mission.id}
@@ -3995,20 +4640,37 @@ export default function MindShift360() {
                         {alliance?.name || "Alliance"} · {(mission.participants + (hasJoined ? 1 : 0)).toLocaleString()} builders
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       <span className="px-2 py-0.5 rounded-lg text-[11px] bg-blue-500/10 text-blue-300 border border-blue-500/20">
                         {mission.effort}
                       </span>
                       <span className="px-2 py-0.5 rounded-lg text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                        ${mission.rewardUsd}
+                        ${mission.rewardUsd || 0}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-lg text-[11px] bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                        +{rewardJou} {JOULE.ticker}
                       </span>
                       <span className="px-2 py-0.5 rounded-lg text-[11px] bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                        +{mission.rewardPoints} pts
+                        +{mission.rewardPoints || 0} pts
                       </span>
                     </div>
                   </div>
 
                   <p className="text-gray-300 text-xs mb-2 leading-relaxed">{mission.summary}</p>
+
+                  {mission.inviteCode && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded-lg text-[11px] bg-yellow-500/10 text-yellow-300 border border-yellow-500/20">
+                        Invite: {mission.inviteCode}
+                      </span>
+                      <button
+                        onClick={() => copyMissionInviteLink(mission.inviteCode)}
+                        className="text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-all"
+                      >
+                        Copy Link
+                      </button>
+                    </div>
+                  )}
 
                   <div className="space-y-1 mb-3">
                     {mission.deliverables.map((deliverable, index) => (
@@ -4026,7 +4688,7 @@ export default function MindShift360() {
                       onClick={() => joinMission(mission)}
                       className="w-full py-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white text-xs font-semibold rounded-xl transition-all"
                     >
-                      Join Mission
+                      Join Mission (+{Math.floor(INVITE_JOIN_BONUS / 2)} {JOULE.ticker})
                     </button>
                   )}
 
@@ -4059,7 +4721,7 @@ export default function MindShift360() {
                           onClick={() => claimMissionReward(mission)}
                           className="mt-2 w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition-all"
                         >
-                          Claim Reward (${mission.rewardUsd} + {mission.rewardPoints} pts)
+                          Claim Reward (${mission.rewardUsd || 0} + {rewardJou} {JOULE.ticker} + {mission.rewardPoints || 0} pts)
                         </button>
                       ) : (
                         <div className="mt-2 px-2 py-1 rounded-lg text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 inline-flex items-center gap-1.5">
@@ -4069,6 +4731,47 @@ export default function MindShift360() {
                       )}
                     </div>
                   )}
+
+                  <div className="mt-3 pt-2 border-t border-gray-800/60">
+                    <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-1.5">Mission Thread (Human + AI)</p>
+                    <div className="space-y-1.5 mb-2">
+                      {missionThread.slice(0, 4).map((entry) => (
+                        <div key={entry.id} className="rounded-lg bg-gray-900/50 border border-gray-800 px-2.5 py-2">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-xs">{entry.user.avatar}</span>
+                            <span className="text-white text-[11px] font-medium">{entry.user.name}</span>
+                            {entry.role === "ai" && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/15 text-blue-300 border border-blue-500/20">
+                                AI
+                              </span>
+                            )}
+                            <span className="text-gray-600 text-[10px] ml-auto">{entry.time}</span>
+                          </div>
+                          <p className="text-gray-300 text-[11px] leading-relaxed">{entry.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {hasJoined && (
+                      <div className="flex gap-2">
+                        <input
+                          value={missionChatInput}
+                          onChange={(event) =>
+                            setMissionCommentInputs((prev) => ({ ...prev, [mission.id]: event.target.value }))
+                          }
+                          onKeyDown={(event) => event.key === "Enter" && postMissionComment(mission)}
+                          placeholder="Post update. AI will respond with next action."
+                          className="flex-1 bg-gray-900/50 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
+                        />
+                        <button
+                          onClick={() => postMissionComment(mission)}
+                          disabled={!missionChatInput.trim()}
+                          className="px-3 py-2 bg-emerald-600 disabled:bg-gray-800 disabled:text-gray-600 text-white rounded-xl text-xs hover:bg-emerald-500 transition-all"
+                        >
+                          <Send size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -4078,7 +4781,7 @@ export default function MindShift360() {
             <h3 className="text-gray-300 text-xs font-semibold uppercase tracking-wider mb-2">Recent Proofs</h3>
             <div className="space-y-2">
               {missionProofFeed.slice(0, 4).map((proof) => {
-                const mission = SEED_MISSIONS.find((item) => item.id === proof.missionId);
+                const mission = allMissions.find((item) => item.id === proof.missionId);
                 return (
                   <div key={proof.id} className="rounded-xl border border-gray-800 bg-gray-900/30 p-2.5">
                     <div className="flex items-center gap-2 mb-1">
@@ -4323,6 +5026,11 @@ export default function MindShift360() {
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-soft" />
               <span className="font-mono">{livePresence.onlineNow.toLocaleString()} online</span>
             </div>
+            {profile && (
+              <div className="px-2 py-1 rounded-lg border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 text-xs font-mono">
+                {walletJoules.toLocaleString()} {JOULE.ticker}
+              </div>
+            )}
             {profile ? (
               <div
                 className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-sm cursor-pointer hover:ring-2 hover:ring-emerald-500/30 transition-all"
