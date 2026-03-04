@@ -16,13 +16,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, message: "Method not allowed." });
   }
 
-  const { name, email, dob } = req.body || {};
+  const { mode, name, email, dob } = req.body || {};
+  const authMode = mode === "login" ? "login" : "signup";
   const cleanName = (name || "").trim();
   const cleanEmail = (email || "").trim().toLowerCase();
 
-  if (!cleanName) return res.status(400).json({ ok: false, message: "Name is required." });
   if (!validateEmail(cleanEmail)) return res.status(400).json({ ok: false, message: "Valid email is required." });
-  if (!dob || !canCreateAccountFromDob(dob)) {
+  if (authMode === "signup" && !cleanName) {
+    return res.status(400).json({ ok: false, message: "Name is required." });
+  }
+  if (authMode === "signup" && (!dob || !canCreateAccountFromDob(dob))) {
     return res.status(400).json({ ok: false, message: "Date of birth is required (13+)." });
   }
 
@@ -38,7 +41,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const emailResult = await sendOtpEmail({ name: cleanName, email: cleanEmail, otp });
+  const emailResult = await sendOtpEmail({ name: cleanName || "there", email: cleanEmail, otp });
   if (!emailResult.ok) {
     return res.status(503).json({ ok: false, message: emailResult.message || "Unable to send OTP email." });
   }

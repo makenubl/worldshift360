@@ -1903,17 +1903,23 @@ export default function MindShift360() {
     setNewPostText("");
   }, [newPostText, profile]);
 
-  const requestOtp = useCallback(async () => {
+  const requestOtp = useCallback(async (authMode = "signup") => {
+    const isSignupMode = authMode === "signup";
     const cleanName = form.name.trim();
     const cleanEmail = form.email.trim().toLowerCase();
     const ageFromDob = calculateAgeFromDob(form.dob);
 
-    if (!cleanName || !form.dob || !isValidEmail(cleanEmail)) {
+    if (!isValidEmail(cleanEmail)) {
       setOtpStatus("error");
-      setOtpMessage("Enter valid name, date of birth, and email first.");
+      setOtpMessage("Enter a valid email first.");
       return;
     }
-    if (ageFromDob < 13) {
+    if (isSignupMode && (!cleanName || !form.dob)) {
+      setOtpStatus("error");
+      setOtpMessage("Enter valid name and date of birth first.");
+      return;
+    }
+    if (isSignupMode && ageFromDob < 13) {
       setOtpStatus("error");
       setOtpMessage("Account creation requires age 13 or above.");
       return;
@@ -1927,7 +1933,12 @@ export default function MindShift360() {
       const response = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: cleanName, email: cleanEmail, dob: form.dob }),
+        body: JSON.stringify({
+          mode: isSignupMode ? "signup" : "login",
+          name: cleanName,
+          email: cleanEmail,
+          dob: form.dob,
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data?.ok) {
@@ -1986,16 +1997,36 @@ export default function MindShift360() {
     }
   }, [form.email, otpInput, otpIssuedFor, otpSessionToken, otpStatus]);
 
-  const handleOnboard = useCallback(() => {
+  const handleOnboard = useCallback((authMode = "signup") => {
+    const isSignupMode = authMode === "signup";
     const cleanName = form.name.trim();
     const cleanEmail = form.email.trim().toLowerCase();
-    if (!cleanName || !form.dob || !isValidEmail(cleanEmail) || otpStatus !== "verified") return;
+
+    if (!isValidEmail(cleanEmail)) {
+      setOtpStatus("error");
+      setOtpMessage("Enter a valid email.");
+      return;
+    }
+    if (otpStatus !== "verified") {
+      setOtpStatus("error");
+      setOtpMessage("Verify OTP before continuing.");
+      return;
+    }
+    if (isSignupMode && (!cleanName || !form.dob || calculateAgeFromDob(form.dob) < 13)) {
+      setOtpStatus("error");
+      setOtpMessage("Complete name and valid date of birth (13+) to sign up.");
+      return;
+    }
+
+    const resolvedName = cleanName || profile?.name || cleanEmail.split("@")[0] || "Member";
+    const resolvedDob = form.dob || profile?.dob || "";
+    const resolvedAge = resolvedDob ? calculateAgeFromDob(resolvedDob) : profile?.age || 18;
 
     const normalizedProfile = {
-      name: cleanName,
+      name: resolvedName,
       email: cleanEmail,
-      dob: form.dob,
-      age: calculateAgeFromDob(form.dob),
+      dob: resolvedDob,
+      age: resolvedAge,
       profileTier: "basic",
       province: "",
       sector: "",
@@ -2016,7 +2047,7 @@ export default function MindShift360() {
     setShowLanding(false);
     setTab("world");
     setNetworkStats((s) => ({ ...s, minds: s.minds + 1 }));
-  }, [form, otpStatus]);
+  }, [form, otpStatus, profile]);
 
   const handleLandingCreateWire = useCallback(() => {
     setShowLanding(false);
@@ -3099,10 +3130,14 @@ export default function MindShift360() {
   // ── PAGES ──
 
   const LandingPage = () => {
-    const canSendOtp = Boolean(form.name.trim() && form.dob && isValidEmail(form.email));
+    const hasValidEmail = isValidEmail(form.email);
+    const canSendOtp =
+      landingAuthMode === "signup"
+        ? Boolean(form.name.trim() && form.dob && hasValidEmail && calculateAgeFromDob(form.dob) >= 13)
+        : hasValidEmail;
     const otpBusy = otpStatus === "sending" || otpStatus === "verifying";
-    const canContinue = canSendOtp && otpStatus === "verified";
     const isSignup = landingAuthMode === "signup";
+    const canContinue = otpStatus === "verified" && (isSignup ? Boolean(form.name.trim() && form.dob) : true);
 
     return (
       <div className="min-h-screen bg-gray-950 text-white overflow-x-hidden relative">
@@ -3163,7 +3198,7 @@ export default function MindShift360() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-gray-500 text-xs mb-1 block">Name</label>
+                    <label className="text-gray-500 text-xs mb-1 block">Name {isSignup ? "*" : "(optional)"}</label>
                     <input
                       value={form.name}
                       onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
@@ -3182,7 +3217,7 @@ export default function MindShift360() {
                     />
                   </div>
                   <div>
-                    <label className="text-gray-500 text-xs mb-1 block">Date of Birth</label>
+                    <label className="text-gray-500 text-xs mb-1 block">Date of Birth {isSignup ? "*" : "(optional)"}</label>
                     <input
                       type="date"
                       max={new Date().toISOString().split("T")[0]}
@@ -3192,12 +3227,13 @@ export default function MindShift360() {
                     />
                   </div>
                   <button
-                    onClick={requestOtp}
+                    onClick={() => requestOtp(isSignup ? "signup" : "login")}
                     disabled={!canSendOtp || otpBusy}
                     className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-600 text-white text-sm rounded-xl transition-all"
                   >
                     {otpStatus === "sending" ? "Sending OTP..." : otpStatus === "sent" || otpStatus === "verified" ? "Resend OTP" : "Send OTP"}
                   </button>
+                  {!isSignup && <p className="text-gray-600 text-[11px] -mt-1">Login requires email + OTP. Name and DOB are optional.</p>}
 
                   {(otpStatus === "sent" || otpStatus === "verified" || otpStatus === "error" || otpStatus === "verifying") && (
                     <div>
@@ -3228,7 +3264,7 @@ export default function MindShift360() {
                   )}
 
                   <button
-                    onClick={handleOnboard}
+                    onClick={() => handleOnboard(isSignup ? "signup" : "login")}
                     disabled={!canContinue}
                     className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl text-sm hover:from-emerald-500 hover:to-blue-500 disabled:opacity-40 transition-all"
                   >
@@ -3927,7 +3963,7 @@ export default function MindShift360() {
                   placeholder="you@email.com"
                 />
                 <button
-                  onClick={requestOtp}
+                  onClick={() => requestOtp("signup")}
                   disabled={!canSendOtp || otpBusy}
                   className="px-3 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs font-medium rounded-xl transition-all"
                 >
@@ -3975,7 +4011,7 @@ export default function MindShift360() {
               Cancel
             </button>
             <button
-              onClick={handleOnboard}
+              onClick={() => handleOnboard("signup")}
               disabled={!canCreateAccount}
               className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white font-medium rounded-xl text-sm hover:from-emerald-500 hover:to-blue-500 disabled:opacity-40 transition-all"
             >
