@@ -65,7 +65,7 @@ function computeLivePayload(nowMs) {
   const interactions = 2847291 + minute * 19 + secondOfMinute * 2 + Math.floor((cycleB + 1) * 140);
   const accuracy = Number((78.2 + ((Math.sin(minute / 23) + 1) * 0.95)).toFixed(2));
 
-  const onlineNow = 12200 + Math.floor((cycleA + 1) * 520) + Math.floor((Math.sin(second / 9) + 1) * 90);
+  const onlineNow = 12200 + Math.floor((cycleA + 1) * 520) + Math.floor((Math.sin(secondOfMinute / 9) + 1) * 90);
   const joiningPerMin = 55 + Math.floor((Math.cos(minute / 4) + 1) * 16);
   const postsPerMin = 130 + Math.floor((Math.sin(minute / 5) + 1) * 40);
   const activeCountries = 136 + Math.floor((Math.cos(minute / 9) + 1) * 12);
