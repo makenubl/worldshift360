@@ -4294,7 +4294,7 @@ export default function MindShift360() {
 
   const tabs = [
     { id: "feed", label: "Feed", icon: Zap },
-    { id: "world", label: "World Sim", icon: Globe },
+    { id: "world", label: "Strategy Arena", icon: Globe },
     { id: "paradigm", label: "Shifts", icon: GitBranch },
     { id: "profile", label: "Me", icon: User },
   ];
