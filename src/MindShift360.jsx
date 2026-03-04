@@ -3162,15 +3162,6 @@ export default function MindShift360() {
             style={{ objectPosition: "right center" }}
           />
         </div>
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              landingPhotoOnly
-                ? "linear-gradient(180deg, rgba(2,8,20,0.16), rgba(6,14,30,0.28))"
-                : "linear-gradient(180deg, rgba(2,8,20,0.32), rgba(6,14,30,0.55)), radial-gradient(circle at 8% 12%, rgba(16,185,129,0.08), transparent 44%), radial-gradient(circle at 88% 18%, rgba(59,130,246,0.1), transparent 40%), radial-gradient(circle at 50% 100%, rgba(99,102,241,0.06), transparent 50%)",
-          }}
-        />
         {!landingPhotoOnly && (
           <div className="relative min-h-screen flex items-start md:items-center justify-center px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto">
             <div
