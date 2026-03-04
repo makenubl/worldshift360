@@ -2048,7 +2048,7 @@ export default function MindShift360() {
     setOtpMessage("");
     setShowLanding(false);
     setLandingPhotoOnly(false);
-    setTab("world");
+    setTab("feed");
     setNetworkStats((s) => ({ ...s, minds: s.minds + 1 }));
   }, [form, otpStatus, profile]);
 
@@ -2061,6 +2061,24 @@ export default function MindShift360() {
     setOtpDebugCode("");
     setOtpMessage("");
   }, []);
+
+  const openCreateWire = useCallback(() => {
+    if (!profile) {
+      setShowOnboard(true);
+      return;
+    }
+    setShowMissionBuilder(true);
+    setTab("world");
+  }, [profile]);
+
+  const openJoinWire = useCallback(() => {
+    if (!profile) {
+      setShowOnboard(true);
+      return;
+    }
+    setShowMissionBuilder(false);
+    setTab("world");
+  }, [profile]);
 
   const handleSignOut = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -3427,13 +3445,22 @@ export default function MindShift360() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setTab("world")}
-                className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm font-semibold rounded-xl hover:from-emerald-500 hover:to-blue-500 transition-all"
-              >
-                Open Wires
-              </button>
-              {!profile && (
+              {profile ? (
+                <>
+                  <button
+                    onClick={openCreateWire}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm font-semibold rounded-xl hover:from-emerald-500 hover:to-blue-500 transition-all"
+                  >
+                    Create Wire
+                  </button>
+                  <button
+                    onClick={openJoinWire}
+                    className="px-4 py-2 bg-white/10 border border-white/20 text-white text-sm rounded-xl hover:bg-white/15 transition-all"
+                  >
+                    Join Wire
+                  </button>
+                </>
+              ) : (
                 <button
                   onClick={() => setShowOnboard(true)}
                   className="px-4 py-2 bg-white/10 border border-white/20 text-white text-sm rounded-xl hover:bg-white/15 transition-all"
