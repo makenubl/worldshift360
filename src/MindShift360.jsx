@@ -1574,8 +1574,10 @@ export default function MindShift360() {
   const [missionDraft, setMissionDraft] = useState({
     title: "",
     summary: "",
+    successMetric: "",
     deliverables: ["", "", ""],
     effort: "3-5 hours",
+    deadlineDays: 7,
     rewardJou: 120,
     allianceId: "a5",
   });
@@ -2224,10 +2226,12 @@ export default function MindShift360() {
 
     const title = missionDraft.title.trim();
     const summary = missionDraft.summary.trim();
+    const successMetric = missionDraft.successMetric.trim();
+    const deadlineDays = clamp(Number(missionDraft.deadlineDays) || 7, 1, 45);
     const deliverables = missionDraft.deliverables.map((item) => item.trim()).filter(Boolean);
     const rewardJou = clamp(Number(missionDraft.rewardJou) || 0, MIN_MISSION_REWARD_JOU, MAX_MISSION_REWARD_JOU);
 
-    if (!title || !summary || deliverables.length < 2) return;
+    if (!title || !summary || !successMetric || deliverables.length < 2) return;
 
     const escrowStake = Math.max(20, Math.round(rewardJou * 0.3));
     if (walletJoules < escrowStake) return;
@@ -2240,8 +2244,10 @@ export default function MindShift360() {
       allianceId: missionDraft.allianceId || "a5",
       title,
       summary,
+      successMetric,
       deliverables,
       effort: missionDraft.effort || "3-5 hours",
+      deadlineDays,
       rewardUsd: Math.max(35, Math.round(rewardJou * 0.62)),
       rewardPoints: Math.max(90, Math.round(rewardJou * 1.8)),
       rewardJou,
@@ -2272,7 +2278,7 @@ export default function MindShift360() {
           id: `${mission.id}_founder`,
           role: "member",
           user: { name: profile.name, avatar: AVATARS[(profile.name?.length || 0) % AVATARS.length] },
-          text: `I launched "${title}". First checkpoint opens now — looking for builders who can ship in 7 days.`,
+          text: `I launched "${title}". First checkpoint opens now — looking for builders who can ship in ${deadlineDays} days.`,
           time: "just now",
           likes: 0,
         },
@@ -2286,8 +2292,10 @@ export default function MindShift360() {
     setMissionDraft({
       title: "",
       summary: "",
+      successMetric: "",
       deliverables: ["", "", ""],
       effort: "3-5 hours",
+      deadlineDays: 7,
       rewardJou: 120,
       allianceId: missionDraft.allianceId || "a5",
     });
@@ -2442,6 +2450,29 @@ export default function MindShift360() {
       }),
     [strategyBattles],
   );
+
+  const missionDraftChecklist = useMemo(() => {
+    const rewardJou = clamp(Number(missionDraft.rewardJou) || 0, MIN_MISSION_REWARD_JOU, MAX_MISSION_REWARD_JOU);
+    const escrowStake = Math.max(20, Math.round(rewardJou * 0.3));
+    const deliverablesCount = missionDraft.deliverables.filter((item) => item.trim()).length;
+
+    const checks = [
+      { label: "Wire title", ok: missionDraft.title.trim().length >= 6 },
+      { label: "Objective", ok: missionDraft.summary.trim().length >= 24 },
+      { label: "Success metric", ok: missionDraft.successMetric.trim().length >= 8 },
+      { label: "At least 2 deliverables", ok: deliverablesCount >= 2 },
+      { label: "Deadline selected", ok: Number(missionDraft.deadlineDays) > 0 },
+      { label: `Escrow (${escrowStake} ${JOULE.ticker}) funded`, ok: walletJoules >= escrowStake },
+    ];
+
+    return {
+      checks,
+      rewardJou,
+      escrowStake,
+      deliverablesCount,
+      canLaunch: checks.every((item) => item.ok),
+    };
+  }, [missionDraft, walletJoules]);
 
   const supportStrategy = useCallback(
     (battle, sideKey) => {
@@ -4842,14 +4873,20 @@ export default function MindShift360() {
                   <input
                     value={missionDraft.title}
                     onChange={(event) => setMissionDraft((draft) => ({ ...draft, title: event.target.value }))}
-                    placeholder="Wire title"
+                    placeholder="Wire title *"
                     className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
                   />
                   <textarea
                     value={missionDraft.summary}
                     onChange={(event) => setMissionDraft((draft) => ({ ...draft, summary: event.target.value }))}
-                    placeholder="Wire objective and expected measurable outcome"
+                    placeholder="Wire objective and expected measurable outcome *"
                     className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30 resize-none min-h-[66px]"
+                  />
+                  <input
+                    value={missionDraft.successMetric}
+                    onChange={(event) => setMissionDraft((draft) => ({ ...draft, successMetric: event.target.value }))}
+                    placeholder="Success metric * (e.g., reduce delivery time by 20% in 7 days)"
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
                   />
                   <div className="grid md:grid-cols-2 gap-2">
                     <select
@@ -4874,20 +4911,36 @@ export default function MindShift360() {
                         </option>
                       ))}
                     </select>
+                    <select
+                      value={missionDraft.deadlineDays}
+                      onChange={(event) => setMissionDraft((draft) => ({ ...draft, deadlineDays: Number(event.target.value) }))}
+                      className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30 md:col-span-2"
+                    >
+                      {[
+                        { value: 3, label: "Deadline: 3 days" },
+                        { value: 7, label: "Deadline: 7 days" },
+                        { value: 14, label: "Deadline: 14 days" },
+                        { value: 30, label: "Deadline: 30 days" },
+                      ].map((option) => (
+                        <option key={option.value} value={option.value} className="bg-gray-900">
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   {missionDraft.deliverables.map((deliverable, index) => (
                     <input
                       key={index}
                       value={deliverable}
                       onChange={(event) => updateMissionDraftDeliverable(index, event.target.value)}
-                      placeholder={`Deliverable ${index + 1}`}
+                      placeholder={`Deliverable ${index + 1}${index < 2 ? " *" : ""}`}
                       className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
                     />
                   ))}
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-gray-500 text-[11px] uppercase tracking-wider">Reward Pool ({JOULE.ticker})</span>
-                      <span className="text-cyan-300 text-xs font-mono">{Math.round(missionDraft.rewardJou)} {JOULE.ticker}</span>
+                      <span className="text-cyan-300 text-xs font-mono">{Math.round(missionDraftChecklist.rewardJou)} {JOULE.ticker}</span>
                     </div>
                     <input
                       type="range"
@@ -4901,24 +4954,30 @@ export default function MindShift360() {
                       className="w-full accent-emerald-500"
                     />
                     <p className="text-gray-500 text-[11px] mt-1">
-                      Escrow lock on launch: {Math.max(20, Math.round((Number(missionDraft.rewardJou) || 0) * 0.3))} {JOULE.ticker}
+                      Escrow lock on launch: {missionDraftChecklist.escrowStake} {JOULE.ticker}
                     </p>
+                  </div>
+                  <div className="rounded-xl border border-gray-800 bg-black/20 p-2.5">
+                    <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-1.5">Required to launch</p>
+                    <div className="grid md:grid-cols-2 gap-1.5">
+                      {missionDraftChecklist.checks.map((item) => (
+                        <div key={item.label} className="flex items-center gap-1.5 text-[11px]">
+                          <CheckCircle2 size={12} className={item.ok ? "text-emerald-400" : "text-gray-700"} />
+                          <span className={item.ok ? "text-gray-300" : "text-gray-600"}>{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <button
                     onClick={handleCreateMission}
-                    disabled={
-                      !missionDraft.title.trim() ||
-                      !missionDraft.summary.trim() ||
-                      missionDraft.deliverables.filter((item) => item.trim()).length < 2 ||
-                      walletJoules < Math.max(20, Math.round((Number(missionDraft.rewardJou) || 0) * 0.3))
-                    }
+                    disabled={!missionDraftChecklist.canLaunch}
                     className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-sm font-semibold transition-all"
                   >
                     Launch Wire + Generate Invite
                   </button>
-                  {walletJoules < Math.max(20, Math.round((Number(missionDraft.rewardJou) || 0) * 0.3)) && (
+                  {!missionDraftChecklist.canLaunch && (
                     <p className="text-red-300 text-[11px]">
-                      You need more {JOULE.ticker} in wallet to launch this reward pool.
+                      Complete required fields and ensure escrow is funded to launch.
                     </p>
                   )}
                 </div>
@@ -4974,6 +5033,20 @@ export default function MindShift360() {
                   </div>
 
                   <p className="text-gray-300 text-xs mb-2 leading-relaxed">{mission.summary}</p>
+                  {(mission.successMetric || mission.deadlineDays) && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {mission.successMetric && (
+                        <span className="px-2 py-0.5 rounded-lg text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                          Success: {mission.successMetric}
+                        </span>
+                      )}
+                      {mission.deadlineDays && (
+                        <span className="px-2 py-0.5 rounded-lg text-[11px] bg-orange-500/10 text-orange-300 border border-orange-500/20">
+                          Deadline: {mission.deadlineDays} days
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {mission.inviteCode && (
                     <div className="flex items-center gap-2 mb-2">
