@@ -951,6 +951,90 @@ const SEED_ALLIANCES = [
   },
 ];
 
+const SEED_MISSIONS = [
+  {
+    id: "m1",
+    allianceId: "a5",
+    title: "Deploy Food + Water Sensor Pilot",
+    summary:
+      "Stand up a minimum viable sensor grid for one local food and water node, with transparent uptime + output tracking.",
+    deliverables: [
+      "Map one local farm/water site and publish baseline metrics",
+      "Deploy at least 5 low-cost sensors and stream readings",
+      "Share a public dashboard snapshot + 7-day anomaly report",
+    ],
+    effort: "4-6 hours",
+    rewardUsd: 120,
+    rewardPoints: 260,
+    participants: 384,
+    urgency: "critical",
+  },
+  {
+    id: "m2",
+    allianceId: "a3",
+    title: "Launch Microgrid Readiness Plan",
+    summary:
+      "Create a practical plan for one neighborhood microgrid with load assumptions, capex estimate, and first-install timeline.",
+    deliverables: [
+      "Estimate peak demand for 20-50 homes/businesses",
+      "Publish solar + battery sizing assumptions",
+      "Present rollout phases with cost, owners, and payback",
+    ],
+    effort: "3-5 hours",
+    rewardUsd: 95,
+    rewardPoints: 210,
+    participants: 269,
+    urgency: "high",
+  },
+  {
+    id: "m3",
+    allianceId: "a1",
+    title: "Automate One Local Logistics Loop",
+    summary:
+      "Use AI planning + shared routing to reduce one recurring local delivery cycle by time and cost.",
+    deliverables: [
+      "Document current route time/cost baseline",
+      "Run AI-assisted optimized routing for 7 days",
+      "Publish before/after metrics + reusable playbook",
+    ],
+    effort: "4-7 hours",
+    rewardUsd: 140,
+    rewardPoints: 300,
+    participants: 441,
+    urgency: "critical",
+  },
+];
+
+const SEED_MISSION_PROOFS = [
+  {
+    id: "proof_1",
+    missionId: "m1",
+    userName: "Nia Okafor",
+    avatar: "👷",
+    proof:
+      "Installed moisture + flow sensors in two farms and published first 48h telemetry. We already detected one leakage pattern.",
+    time: "32m ago",
+  },
+  {
+    id: "proof_2",
+    missionId: "m2",
+    userName: "Muhammad Iqbal",
+    avatar: "👨‍🌾",
+    proof:
+      "Built load profile for 27 homes + one cold-storage point. Shared capex/payback sheet with local cooperative leaders.",
+    time: "1h ago",
+  },
+  {
+    id: "proof_3",
+    missionId: "m3",
+    userName: "Aisha Malik",
+    avatar: "👩‍💻",
+    proof:
+      "Optimized 6 delivery routes with AI planner. Distance down 18%, on-time delivery up 23%, fuel costs down 12% in week one.",
+    time: "2h ago",
+  },
+];
+
 // ── DAILY ROUTINE SCORING ──
 const ROUTINE_QUESTIONS = [
   {
@@ -1237,6 +1321,10 @@ export default function MindShift360() {
   const [routineStep, setRoutineStep] = useState(-1);
   const [routineAnswers, setRoutineAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
+  const [missionState, setMissionState] = useState({});
+  const [missionProofInputs, setMissionProofInputs] = useState({});
+  const [missionProofFeed, setMissionProofFeed] = useState(SEED_MISSION_PROOFS);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1327,6 +1415,52 @@ export default function MindShift360() {
 
     return () => clearInterval(interval);
   }, [apiConnected]);
+
+  useEffect(() => {
+    try {
+      const savedProfile = localStorage.getItem("rewire_profile");
+      const savedJoinedAlliances = localStorage.getItem("rewire_joined_alliances");
+      const savedUserAlliances = localStorage.getItem("rewire_user_alliances");
+      const savedMissionState = localStorage.getItem("rewire_mission_state");
+      const savedMissionProofFeed = localStorage.getItem("rewire_mission_proof_feed");
+
+      if (savedProfile) setProfile(JSON.parse(savedProfile));
+      if (savedJoinedAlliances) setJoinedAlliances(new Set(JSON.parse(savedJoinedAlliances)));
+      if (savedUserAlliances) setUserAlliances(JSON.parse(savedUserAlliances));
+      if (savedMissionState) setMissionState(JSON.parse(savedMissionState));
+      if (savedMissionProofFeed) setMissionProofFeed(JSON.parse(savedMissionProofFeed));
+    } catch {
+      setMissionState({});
+      setMissionProofFeed(SEED_MISSION_PROOFS);
+    } finally {
+      setHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_profile", JSON.stringify(profile));
+  }, [hydrated, profile]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_joined_alliances", JSON.stringify([...joinedAlliances]));
+  }, [hydrated, joinedAlliances]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_user_alliances", JSON.stringify(userAlliances));
+  }, [hydrated, userAlliances]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_mission_state", JSON.stringify(missionState));
+  }, [hydrated, missionState]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("rewire_mission_proof_feed", JSON.stringify(missionProofFeed));
+  }, [hydrated, missionProofFeed]);
 
   const toggleReaction = useCallback((postId, key) => {
     setUserReactions((prev) => {
@@ -1498,6 +1632,98 @@ export default function MindShift360() {
     setNewAlliance({ name: "", worldVision: "", philosophy: "", commitments: ["", "", ""] });
     setSelectedAlliance(alliance.id);
   }, [newAlliance, profile]);
+
+  const missionSummary = useMemo(() => {
+    let joined = 0;
+    let submitted = 0;
+    let rewarded = 0;
+    let totalUsd = 0;
+    let totalPoints = 0;
+
+    SEED_MISSIONS.forEach((mission) => {
+      const state = missionState[mission.id];
+      if (!state) return;
+      joined += 1;
+      if (state.status === "submitted" || state.status === "rewarded") submitted += 1;
+      if (state.status === "rewarded") {
+        rewarded += 1;
+        totalUsd += mission.rewardUsd;
+        totalPoints += mission.rewardPoints;
+      }
+    });
+
+    return { joined, submitted, rewarded, totalUsd, totalPoints };
+  }, [missionState]);
+
+  const joinMission = useCallback(
+    (mission) => {
+      if (!profile) {
+        setShowOnboard(true);
+        return;
+      }
+      setMissionState((prev) => {
+        if (prev[mission.id]) return prev;
+        return {
+          ...prev,
+          [mission.id]: { status: "joined", joinedAt: Date.now(), proof: "", submittedAt: null, rewardedAt: null },
+        };
+      });
+      setJoinedAlliances((prev) => {
+        if (prev.has(mission.allianceId)) return prev;
+        return new Set([...prev, mission.allianceId]);
+      });
+      setNetworkStats((stats) => ({ ...stats, interactions: stats.interactions + 1 }));
+    },
+    [profile],
+  );
+
+  const submitMissionProof = useCallback(
+    (mission) => {
+      if (!profile) {
+        setShowOnboard(true);
+        return;
+      }
+      const proof = missionProofInputs[mission.id]?.trim();
+      if (!proof || proof.length < 24) return;
+
+      const now = Date.now();
+      setMissionState((prev) => ({
+        ...prev,
+        [mission.id]: { ...(prev[mission.id] || {}), status: "submitted", proof, submittedAt: now },
+      }));
+      setMissionProofInputs((prev) => ({ ...prev, [mission.id]: "" }));
+      setMissionProofFeed((prev) => [
+        {
+          id: `proof_${mission.id}_${now}`,
+          missionId: mission.id,
+          userName: profile.name,
+          avatar: AVATARS[(profile.name?.length || 0) % AVATARS.length],
+          proof,
+          time: "just now",
+        },
+        ...prev,
+      ]);
+      setNetworkStats((stats) => ({
+        ...stats,
+        interactions: stats.interactions + 2,
+        accuracy: Math.min(99, stats.accuracy + 0.002),
+      }));
+    },
+    [missionProofInputs, profile],
+  );
+
+  const claimMissionReward = useCallback(
+    (mission) => {
+      const state = missionState[mission.id];
+      if (!state || state.status !== "submitted") return;
+      setMissionState((prev) => ({
+        ...prev,
+        [mission.id]: { ...prev[mission.id], status: "rewarded", rewardedAt: Date.now() },
+      }));
+      setNetworkStats((stats) => ({ ...stats, interactions: stats.interactions + 1 }));
+    },
+    [missionState],
+  );
 
   // Advisory
   const advisory = useMemo(() => {
@@ -3095,6 +3321,164 @@ export default function MindShift360() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        <div className="card p-5 mb-4">
+          <div className="flex items-start justify-between mb-3 gap-3">
+            <div>
+              <h2 className="text-white font-bold text-base flex items-center gap-2">
+                <Briefcase size={15} className="text-emerald-400" />
+                Alliance Missions (7-Day Outcomes)
+              </h2>
+              <p className="text-gray-500 text-xs">
+                This is the practical layer: join a mission, ship proof, claim reward, build public reputation.
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-emerald-400 text-xs font-mono">{missionSummary.rewarded} rewards claimed</p>
+              <p className="text-gray-500 text-xs">${missionSummary.totalUsd.toLocaleString()} unlocked</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-2.5">
+              <p className="text-gray-500 text-[11px] uppercase tracking-wider">Joined</p>
+              <p className="text-white text-sm font-mono">{missionSummary.joined}</p>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-2.5">
+              <p className="text-gray-500 text-[11px] uppercase tracking-wider">Proof Submitted</p>
+              <p className="text-blue-300 text-sm font-mono">{missionSummary.submitted}</p>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-2.5">
+              <p className="text-gray-500 text-[11px] uppercase tracking-wider">Rewards</p>
+              <p className="text-emerald-300 text-sm font-mono">${missionSummary.totalUsd.toLocaleString()}</p>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-2.5">
+              <p className="text-gray-500 text-[11px] uppercase tracking-wider">Rewire Points</p>
+              <p className="text-purple-300 text-sm font-mono">{missionSummary.totalPoints.toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {SEED_MISSIONS.map((mission) => {
+              const missionProgress = missionState[mission.id];
+              const alliance = allAlliances.find((item) => item.id === mission.allianceId);
+              const proofText = missionProofInputs[mission.id] || "";
+              const hasJoined = Boolean(missionProgress);
+              const hasSubmitted = missionProgress?.status === "submitted" || missionProgress?.status === "rewarded";
+              const isRewarded = missionProgress?.status === "rewarded";
+              return (
+                <div
+                  key={mission.id}
+                  className="rounded-xl border border-gray-800 bg-gray-900/30 p-3"
+                  style={{ borderColor: isRewarded ? "rgba(16,185,129,0.35)" : "rgba(255,255,255,0.08)" }}
+                >
+                  <div className="flex flex-wrap items-start gap-2 justify-between mb-2">
+                    <div>
+                      <h3 className="text-white text-sm font-semibold">{mission.title}</h3>
+                      <p className="text-gray-500 text-xs mt-0.5">
+                        {alliance?.name || "Alliance"} · {(mission.participants + (hasJoined ? 1 : 0)).toLocaleString()} builders
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-lg text-[11px] bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                        {mission.effort}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-lg text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                        ${mission.rewardUsd}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-lg text-[11px] bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                        +{mission.rewardPoints} pts
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-300 text-xs mb-2 leading-relaxed">{mission.summary}</p>
+
+                  <div className="space-y-1 mb-3">
+                    {mission.deliverables.map((deliverable, index) => (
+                      <div key={index} className="flex items-start gap-2 text-xs">
+                        <div className="w-4 h-4 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-400 mt-0.5">
+                          {index + 1}
+                        </div>
+                        <span className="text-gray-400">{deliverable}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {!hasJoined && (
+                    <button
+                      onClick={() => joinMission(mission)}
+                      className="w-full py-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white text-xs font-semibold rounded-xl transition-all"
+                    >
+                      Join Mission
+                    </button>
+                  )}
+
+                  {hasJoined && !hasSubmitted && (
+                    <div className="space-y-2">
+                      <textarea
+                        value={proofText}
+                        onChange={(event) =>
+                          setMissionProofInputs((prev) => ({ ...prev, [mission.id]: event.target.value }))
+                        }
+                        placeholder="Submit proof: what you shipped, metrics, link, and next step..."
+                        className="w-full bg-gray-900/70 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30 resize-none min-h-[72px]"
+                      />
+                      <button
+                        onClick={() => submitMissionProof(mission)}
+                        disabled={proofText.trim().length < 24}
+                        className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs font-semibold rounded-xl transition-all"
+                      >
+                        Submit Proof
+                      </button>
+                    </div>
+                  )}
+
+                  {hasSubmitted && (
+                    <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-2.5">
+                      <p className="text-gray-500 text-[11px] mb-1 uppercase tracking-wider">Your Proof</p>
+                      <p className="text-gray-300 text-xs leading-relaxed">{missionProgress.proof || "Proof submitted."}</p>
+                      {!isRewarded ? (
+                        <button
+                          onClick={() => claimMissionReward(mission)}
+                          className="mt-2 w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition-all"
+                        >
+                          Claim Reward (${mission.rewardUsd} + {mission.rewardPoints} pts)
+                        </button>
+                      ) : (
+                        <div className="mt-2 px-2 py-1 rounded-lg text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 inline-flex items-center gap-1.5">
+                          <CheckCircle2 size={12} />
+                          Reward claimed
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-gray-800/60">
+            <h3 className="text-gray-300 text-xs font-semibold uppercase tracking-wider mb-2">Recent Proofs</h3>
+            <div className="space-y-2">
+              {missionProofFeed.slice(0, 4).map((proof) => {
+                const mission = SEED_MISSIONS.find((item) => item.id === proof.missionId);
+                return (
+                  <div key={proof.id} className="rounded-xl border border-gray-800 bg-gray-900/30 p-2.5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm">{proof.avatar}</span>
+                      <span className="text-white text-xs font-medium">{proof.userName}</span>
+                      <span className="text-gray-600 text-xs">·</span>
+                      <span className="text-gray-500 text-xs">{proof.time}</span>
+                    </div>
+                    <p className="text-emerald-300 text-[11px] mb-1">{mission?.title || "Mission"}</p>
+                    <p className="text-gray-400 text-xs leading-relaxed">{proof.proof}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
