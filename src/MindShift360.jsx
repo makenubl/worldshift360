@@ -1487,6 +1487,15 @@ export default function MindShift360() {
   const [tab, setTab] = useState("feed");
   const [profile, setProfile] = useState(null);
   const [showOnboard, setShowOnboard] = useState(false);
+  const [showLanding, setShowLanding] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const url = new URL(window.location.href);
+      return !url.searchParams.get("invite");
+    } catch {
+      return true;
+    }
+  });
   const [expandedPost, setExpandedPost] = useState(null);
   const [commentInputs, setCommentInputs] = useState({});
   const [userReactions, setUserReactions] = useState({});
@@ -2003,6 +2012,24 @@ export default function MindShift360() {
     setOtpMessage("");
     setNetworkStats((s) => ({ ...s, minds: s.minds + 1 }));
   }, [form, otpStatus]);
+
+  const handleLandingCreateWire = useCallback(() => {
+    setShowLanding(false);
+    setTab("world");
+    setShowMissionBuilder(true);
+    if (!profile) setShowOnboard(true);
+  }, [profile]);
+
+  const handleLandingJoinWires = useCallback(() => {
+    setShowLanding(false);
+    setTab("world");
+    if (!profile) setShowOnboard(true);
+  }, [profile]);
+
+  const handleLandingWatchLive = useCallback(() => {
+    setShowLanding(false);
+    setTab("feed");
+  }, []);
 
   const totalQi = useMemo(() => Object.values(routineAnswers).reduce((sum, value) => sum + value, 0), [routineAnswers]);
   const maxQi = useMemo(
@@ -3024,6 +3051,198 @@ export default function MindShift360() {
   };
 
   // ── PAGES ──
+
+  const LandingPage = () => {
+    const activeTakeovers = strategyLeaders.filter((leader) => leader.takeoverActive).length;
+    const spotlightWires = allMissions.slice(0, 3);
+    const leadingStrategies = strategyLeaders.slice(0, 2);
+    const totalDailyFlow = strategyBattles.reduce((sum, battle) => sum + battle.dailyFlow, 0);
+
+    return (
+      <div className="h-screen bg-gray-950 text-white overflow-hidden relative">
+        <style>{css}</style>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at 8% 10%, rgba(16,185,129,0.14), transparent 45%), radial-gradient(circle at 90% 18%, rgba(59,130,246,0.16), transparent 42%), radial-gradient(circle at 50% 100%, rgba(99,102,241,0.14), transparent 52%)",
+          }}
+        />
+        <div className="relative h-full flex flex-col">
+          <header className="max-w-6xl w-full mx-auto px-4 pt-4 pb-2 flex items-center justify-between gap-3">
+            <button className="flex items-center gap-2.5" onClick={handleLandingWatchLive}>
+              <img
+                src="/rewire-logo-192.png"
+                alt="Rewire logo"
+                className="w-9 h-9 rounded-full object-cover ring-1 ring-blue-400/40 shadow-[0_0_18px_rgba(96,165,250,0.45)]"
+              />
+              <div>
+                <h1 className="text-sm font-bold leading-none">Rewire</h1>
+                <p className="text-gray-500 text-xs leading-none mt-0.5">Work in progress • Coordination layer</p>
+              </div>
+            </button>
+            <button
+              onClick={handleLandingWatchLive}
+              className="px-3 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 transition-all"
+            >
+              Enter Live Platform
+            </button>
+          </header>
+
+          <main className="flex-1 overflow-hidden">
+            <div className="max-w-6xl h-full mx-auto px-4 pb-4 grid lg:grid-cols-[1.25fr_0.75fr] gap-4">
+              <section
+                className="card p-5 md:p-6 flex flex-col justify-between overflow-hidden"
+                style={{
+                  background: "linear-gradient(135deg, rgba(4,20,33,0.95), rgba(18,34,58,0.9))",
+                  borderColor: "rgba(16,185,129,0.28)",
+                }}
+              >
+                <div>
+                  <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-2">
+                    New coordination layer for the AI world
+                  </p>
+                  <h2 className="text-3xl md:text-5xl font-black leading-[0.98] mb-3">
+                    <span className="block">You wanted to create</span>
+                    <span className="block">a better world</span>
+                    <span className="block text-gradient-multi mt-1">now you can.</span>
+                  </h2>
+                  <p className="text-gray-200/90 text-sm md:text-base leading-relaxed max-w-2xl mb-4">
+                    In a world where AI gives individuals intelligence, compute, and automation, passive feeds are obsolete.
+                    Rewire lets people coordinate outcomes: launch wires, recruit partners, and execute measurable missions.
+                  </p>
+                  <p className="text-lg md:text-2xl font-bold leading-tight mb-4">
+                    <span className="block text-gray-100">Old social platforms capture attention.</span>
+                    <span className="block text-emerald-300">Rewire coordinates action.</span>
+                  </p>
+                </div>
+
+                <div className="grid gap-2.5 md:grid-cols-3 mb-4">
+                  <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/20 p-3">
+                    <p className="text-emerald-300 text-[11px] font-semibold uppercase tracking-wider mb-1">Create Wire</p>
+                    <p className="text-gray-200 text-xs leading-relaxed">
+                      Like launching your own company: define mission, roles, proof checks, payout rules.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-blue-500/25 bg-blue-950/20 p-3">
+                    <p className="text-blue-300 text-[11px] font-semibold uppercase tracking-wider mb-1">Joule Financials</p>
+                    <p className="text-gray-200 text-xs leading-relaxed">
+                      Integrated {JOULE.ticker} treasury flow: escrow, verification, reward settlement, shared reserve.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-purple-500/25 bg-purple-950/20 p-3">
+                    <p className="text-purple-300 text-[11px] font-semibold uppercase tracking-wider mb-1">Community Output</p>
+                    <p className="text-gray-200 text-xs leading-relaxed">
+                      Human + AI coordination transforms effort into food, energy, logistics, and security outcomes.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-2 md:grid-cols-3 mb-4">
+                  <div className="rounded-lg bg-black/25 border border-white/10 p-2.5">
+                    <p className="text-gray-500 text-[11px] uppercase tracking-wider">How it works</p>
+                    <p className="text-white text-xs mt-1">1) Launch or join a wire with clear mission scope.</p>
+                  </div>
+                  <div className="rounded-lg bg-black/25 border border-white/10 p-2.5">
+                    <p className="text-gray-500 text-[11px] uppercase tracking-wider">Execution</p>
+                    <p className="text-white text-xs mt-1">2) Ship proof checkpoints with AI coordinator threads.</p>
+                  </div>
+                  <div className="rounded-lg bg-black/25 border border-white/10 p-2.5">
+                    <p className="text-gray-500 text-[11px] uppercase tracking-wider">Value loop</p>
+                    <p className="text-white text-xs mt-1">3) Winners earn {JOULE.ticker}, governance weight, and resource control.</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleLandingCreateWire}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm font-semibold hover:from-emerald-500 hover:to-blue-500 transition-all"
+                  >
+                    Create Your Wire Now
+                  </button>
+                  <button
+                    onClick={handleLandingJoinWires}
+                    className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/5 text-white text-sm font-medium hover:bg-white/10 transition-all"
+                  >
+                    Join Wires
+                  </button>
+                </div>
+              </section>
+
+              <section className="hidden lg:grid gap-4">
+                <div className="card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 pulse-soft" />
+                    <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider">Live Action Board</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="rounded-lg bg-gray-900/65 border border-gray-800 p-2">
+                      <p className="text-gray-500 text-[11px] uppercase tracking-wider">Online now</p>
+                      <p className="text-white text-sm font-mono">{livePresence.onlineNow.toLocaleString()}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-900/65 border border-gray-800 p-2">
+                      <p className="text-gray-500 text-[11px] uppercase tracking-wider">Active wires</p>
+                      <p className="text-white text-sm font-mono">{allMissions.length}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-900/65 border border-gray-800 p-2">
+                      <p className="text-gray-500 text-[11px] uppercase tracking-wider">Rewards settled</p>
+                      <p className="text-white text-sm font-mono">{missionSummary.rewarded}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-900/65 border border-gray-800 p-2">
+                      <p className="text-gray-500 text-[11px] uppercase tracking-wider">{JOULE.ticker} flow/day</p>
+                      <p className="text-white text-sm font-mono">{totalDailyFlow.toFixed(1)}M</p>
+                    </div>
+                  </div>
+                  <p className="text-gray-400 text-xs mb-2">Competing strategies and control races:</p>
+                  <div className="space-y-2">
+                    {leadingStrategies.map((entry) => (
+                      <div key={entry.battleId} className="rounded-lg border border-gray-800 bg-gray-900/40 p-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-white text-xs font-medium truncate pr-2">{entry.leader.name}</span>
+                          <span className="text-emerald-300 text-xs font-mono">{entry.leaderWinRate.toFixed(1)}%</span>
+                        </div>
+                        <p className="text-gray-500 text-[11px]">
+                          {entry.takeoverActive ? "Takeover active" : "Race active"} • {entry.loser.name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-blue-300 text-xs mt-2">
+                    {activeTakeovers} governance takeovers currently above threshold.
+                  </p>
+                </div>
+
+                <div className="card p-4">
+                  <p className="text-blue-300 text-xs font-semibold uppercase tracking-wider mb-2">Example Wires</p>
+                  <div className="space-y-2.5">
+                    {spotlightWires.map((wire) => (
+                      <div key={wire.id} className="rounded-lg border border-gray-800 bg-gray-900/45 p-2.5">
+                        <p className="text-white text-sm font-medium line-clamp-1">{wire.title}</p>
+                        <p className="text-gray-400 text-xs line-clamp-2 mt-0.5">{wire.summary}</p>
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <span className="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-[11px] font-mono">
+                            +{getMissionRewardJou(wire)} {JOULE.ticker}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[11px]">
+                            {wire.effort}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-lg mt-3 p-2.5 bg-emerald-950/20 border border-emerald-500/20">
+                    <p className="text-emerald-200 text-xs">
+                      Treasury today: {treasuryFlow.treasuryLocked.toFixed(2)}M {JOULE.ticker} locked for execution and settlements.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  };
 
   const FeedPage = () => {
     const allPosts = [...communityPosts, ...FEED_POSTS];
@@ -5126,6 +5345,10 @@ export default function MindShift360() {
 
   const currentPage =
     tab === "feed" ? FeedPage() : tab === "world" ? WorldSimPage() : tab === "paradigm" ? ParadigmPage() : MyProfilePage();
+
+  if (showLanding) {
+    return LandingPage();
+  }
 
   return (
     <div className="h-screen bg-gray-950 text-white flex flex-col overflow-hidden">
