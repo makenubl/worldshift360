@@ -22,6 +22,9 @@ Required environment variables for production OTP:
   - Resend: `RESEND_API_KEY`, `OTP_FROM_EMAIL` (optional `OTP_FROM_NAME`)
   - Gmail app password: `GMAIL_USER`, `GMAIL_APP_PASSWORD` (optional `OTP_FROM_EMAIL`, `OTP_FROM_NAME`)
   - Generic SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (optional `SMTP_SECURE=true`, `OTP_FROM_EMAIL`, `OTP_FROM_NAME`)
+- Optional fallback control:
+  - `OTP_ALLOW_SMTP_FALLBACK=true` to allow SMTP/Gmail fallback when Resend fails.
+  - Default behavior keeps fallback disabled when Resend is configured (to avoid sender identity switching).
 
 ## Dev
 

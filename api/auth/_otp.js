@@ -100,6 +100,7 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.OTP_FROM_EMAIL;
   const fromName = process.env.OTP_FROM_NAME || "Rewire";
+  const allowSmtpFallback = process.env.OTP_ALLOW_SMTP_FALLBACK === "true";
   const gmailUser = process.env.GMAIL_USER;
   const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
   const smtpHost = process.env.SMTP_HOST;
@@ -109,6 +110,7 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
   const smtpPass = process.env.SMTP_PASS;
   const smtpConfigured =
     (gmailUser && gmailAppPassword) || (smtpHost && smtpUser && smtpPass && Number.isFinite(smtpPort));
+  const resendConfigured = Boolean(resendApiKey && fromEmail);
 
   const subject = "Your Rewire OTP code";
   const html = `
@@ -147,7 +149,13 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
             },
           });
 
-      const senderEmail = gmailUser ? `${fromName} <${gmailUser}>` : fromEmail || smtpUser;
+      const senderEmail = fromEmail
+        ? fromEmail.includes("<")
+          ? fromEmail
+          : `${fromName} <${fromEmail}>`
+        : gmailUser
+          ? `${fromName} <${gmailUser}>`
+          : smtpUser;
       await transport.sendMail({
         from: senderEmail,
         to: email,
@@ -165,7 +173,7 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
     }
   };
 
-  if (!resendApiKey || !fromEmail) {
+  if (!resendConfigured) {
     if (smtpConfigured) {
       return sendViaSmtp();
     }
@@ -203,7 +211,7 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
 
   if (!response.ok) {
     const details = await response.text().catch(() => "");
-    if (smtpConfigured) {
+    if (allowSmtpFallback && smtpConfigured) {
       const smtpResult = await sendViaSmtp();
       if (smtpResult.ok) {
         return { ok: true, message: `OTP sent to ${email}.` };
@@ -217,7 +225,9 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
     }
     return {
       ok: false,
-      message: details ? `Failed to deliver OTP email: ${details}` : "Failed to deliver OTP email.",
+      message: details
+        ? `Failed to deliver OTP email via Resend: ${details}`
+        : "Failed to deliver OTP email via Resend.",
     };
   }
 
