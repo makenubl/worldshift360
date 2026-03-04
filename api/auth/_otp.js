@@ -100,8 +100,65 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.OTP_FROM_EMAIL;
   const fromName = process.env.OTP_FROM_NAME || "Rewire";
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = Number(process.env.SMTP_PORT || 587);
+  const smtpSecure = process.env.SMTP_SECURE === "true";
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
 
   if (!resendApiKey || !fromEmail) {
+    const smtpConfigured =
+      (gmailUser && gmailAppPassword) || (smtpHost && smtpUser && smtpPass && Number.isFinite(smtpPort));
+
+    if (smtpConfigured) {
+      try {
+        const nodemailer = (await import("nodemailer")).default;
+        const transport = gmailUser
+          ? nodemailer.createTransport({
+              service: "gmail",
+              auth: {
+                user: gmailUser,
+                pass: gmailAppPassword,
+              },
+            })
+          : nodemailer.createTransport({
+              host: smtpHost,
+              port: smtpPort,
+              secure: smtpSecure,
+              auth: {
+                user: smtpUser,
+                pass: smtpPass,
+              },
+            });
+
+        const senderEmail = fromEmail || (gmailUser ? `${fromName} <${gmailUser}>` : smtpUser);
+        await transport.sendMail({
+          from: senderEmail,
+          to: email,
+          subject: "Your Rewire OTP code",
+          text: `Rewire OTP: ${otp}\nThis code expires in 10 minutes.`,
+          html: `
+            <div style="font-family: Inter, Arial, sans-serif; padding: 20px; color: #111827;">
+              <h2 style="margin: 0 0 12px; color: #111827;">Rewire Verification Code</h2>
+              <p style="margin: 0 0 12px;">Hi ${name || "there"},</p>
+              <p style="margin: 0 0 14px;">Use this one-time code to verify your Rewire account:</p>
+              <div style="font-size: 28px; letter-spacing: 6px; font-weight: 700; margin: 8px 0 14px; color: #0f766e;">${otp}</div>
+              <p style="margin: 0; color: #4b5563;">This code expires in 10 minutes.</p>
+            </div>
+          `,
+        });
+
+        return { ok: true, message: `OTP sent to ${email}.` };
+      } catch (error) {
+        return {
+          ok: false,
+          message: `Failed to deliver OTP email: ${error?.message || "SMTP error"}`,
+        };
+      }
+    }
+
     if (!isProduction()) {
       return {
         ok: true,
@@ -111,7 +168,8 @@ export const sendOtpEmail = async ({ name, email, otp }) => {
     }
     return {
       ok: false,
-      message: "OTP email service is not configured. Set RESEND_API_KEY and OTP_FROM_EMAIL.",
+      message:
+        "OTP email service is not configured. Set RESEND_API_KEY + OTP_FROM_EMAIL, or set Gmail/SMTP variables.",
     };
   }
 
