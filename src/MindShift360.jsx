@@ -1575,6 +1575,8 @@ export default function MindShift360() {
   const [showMissionBuilder, setShowMissionBuilder] = useState(false);
   const [missionWizardStep, setMissionWizardStep] = useState(0);
   const [missionDraft, setMissionDraft] = useState({
+    mindsetId: "",
+    beliefNote: "",
     title: "",
     summary: "",
     successMetric: "",
@@ -2321,11 +2323,12 @@ export default function MindShift360() {
     const title = missionDraft.title.trim();
     const summary = missionDraft.summary.trim();
     const successMetric = missionDraft.successMetric.trim();
+    const beliefNote = missionDraft.beliefNote.trim();
     const deadlineDays = clamp(Number(missionDraft.deadlineDays) || 7, 1, 45);
     const deliverables = missionDraft.deliverables.map((item) => item.trim()).filter(Boolean);
     const rewardJou = clamp(Number(missionDraft.rewardJou) || 0, MIN_MISSION_REWARD_JOU, MAX_MISSION_REWARD_JOU);
 
-    if (!title || !summary || !successMetric || deliverables.length < 2) return;
+    if (!missionDraft.mindsetId || beliefNote.length < 24 || !title || !summary || !successMetric || deliverables.length < 2) return;
 
     const escrowStake = Math.max(20, Math.round(rewardJou * 0.3));
     if (walletJoules < escrowStake) return;
@@ -2336,6 +2339,8 @@ export default function MindShift360() {
     const mission = {
       id: missionId,
       allianceId: missionDraft.allianceId || "a5",
+      founderMindsetId: missionDraft.mindsetId,
+      founderBelief: beliefNote,
       title,
       summary,
       successMetric,
@@ -2384,6 +2389,8 @@ export default function MindShift360() {
     }
 
     setMissionDraft({
+      mindsetId: "",
+      beliefNote: "",
       title: "",
       summary: "",
       successMetric: "",
@@ -2550,8 +2557,11 @@ export default function MindShift360() {
     const rewardJou = clamp(Number(missionDraft.rewardJou) || 0, MIN_MISSION_REWARD_JOU, MAX_MISSION_REWARD_JOU);
     const escrowStake = Math.max(20, Math.round(rewardJou * 0.3));
     const deliverablesCount = missionDraft.deliverables.filter((item) => item.trim()).length;
+    const beliefNoteLength = missionDraft.beliefNote.trim().length;
 
     const checks = [
+      { label: "Mindset selected", ok: Boolean(missionDraft.mindsetId) },
+      { label: "Belief statement (24+ chars)", ok: beliefNoteLength >= 24 },
       { label: "Wire title", ok: missionDraft.title.trim().length >= 6 },
       { label: "Objective", ok: missionDraft.summary.trim().length >= 24 },
       { label: "Success metric", ok: missionDraft.successMetric.trim().length >= 8 },
@@ -2565,11 +2575,13 @@ export default function MindShift360() {
       rewardJou,
       escrowStake,
       deliverablesCount,
+      beliefNoteLength,
       canLaunch: checks.every((item) => item.ok),
     };
   }, [missionDraft, walletJoules]);
 
   const missionWizardSteps = useMemo(() => {
+    const hasIdentity = Boolean(missionDraft.mindsetId) && missionDraftChecklist.beliefNoteLength >= 24;
     const hasOutcome =
       missionDraft.title.trim().length >= 6 &&
       missionDraft.summary.trim().length >= 24 &&
@@ -2578,6 +2590,13 @@ export default function MindShift360() {
     const hasEconomics = Number(missionDraft.deadlineDays) > 0 && missionDraftChecklist.rewardJou >= MIN_MISSION_REWARD_JOU;
 
     return [
+      {
+        id: "identity",
+        title: "Know Yourself",
+        purpose:
+          "Partnerships and alliances are belief-first. AI can amplify technical execution, but shared fundamentals decide whether teams stay aligned.",
+        ready: hasIdentity,
+      },
       {
         id: "outcome",
         title: "Outcome",
@@ -2611,6 +2630,10 @@ export default function MindShift360() {
   const selectedDraftAlliance = useMemo(
     () => allAlliances.find((alliance) => alliance.id === missionDraft.allianceId),
     [allAlliances, missionDraft.allianceId],
+  );
+  const selectedDraftMindset = useMemo(
+    () => MINDSET_CLUSTERS.find((mindset) => mindset.id === missionDraft.mindsetId),
+    [missionDraft.mindsetId],
   );
 
   const supportStrategy = useCallback(
@@ -5075,6 +5098,49 @@ export default function MindShift360() {
 
                   {missionWizardStep === 0 && (
                     <div className="space-y-2.5">
+                      <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-2.5">
+                        <p className="text-blue-200 text-xs font-semibold mb-1">Why this comes first</p>
+                        <p className="text-gray-200 text-xs leading-relaxed">
+                          We optimize for fundamentals before technicals. Shared beliefs and operating principles hold alliances
+                          together long term; technical skills can be learned or AI-assisted.
+                        </p>
+                      </div>
+                      <select
+                        value={missionDraft.mindsetId}
+                        onChange={(event) => setMissionDraft((draft) => ({ ...draft, mindsetId: event.target.value }))}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/30"
+                      >
+                        <option value="" className="bg-gray-900">
+                          Select your primary mindset *
+                        </option>
+                        {MINDSET_CLUSTERS.map((mindset) => (
+                          <option key={mindset.id} value={mindset.id} className="bg-gray-900">
+                            {mindset.label}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedDraftMindset && (
+                        <div className="rounded-xl border border-gray-800 bg-black/20 p-2.5">
+                          <p className="text-white text-xs font-semibold mb-1">
+                            {selectedDraftMindset.emoji} {selectedDraftMindset.label}
+                          </p>
+                          <p className="text-gray-400 text-[11px] leading-relaxed">{selectedDraftMindset.beliefs}</p>
+                        </div>
+                      )}
+                      <textarea
+                        value={missionDraft.beliefNote}
+                        onChange={(event) => setMissionDraft((draft) => ({ ...draft, beliefNote: event.target.value }))}
+                        placeholder="Your core belief for this wire * (e.g., We prioritize transparent execution over hype, and we publish proof weekly.)"
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30 resize-none min-h-[74px]"
+                      />
+                      <p className="text-gray-500 text-[11px]">
+                        Belief statement: {missionDraftChecklist.beliefNoteLength}/24 minimum
+                      </p>
+                    </div>
+                  )}
+
+                  {missionWizardStep === 1 && (
+                    <div className="space-y-2.5">
                       <input
                         value={missionDraft.title}
                         onChange={(event) => setMissionDraft((draft) => ({ ...draft, title: event.target.value }))}
@@ -5099,7 +5165,7 @@ export default function MindShift360() {
                     </div>
                   )}
 
-                  {missionWizardStep === 1 && (
+                  {missionWizardStep === 2 && (
                     <div className="space-y-2.5">
                       <div className="grid md:grid-cols-2 gap-2">
                         <select
@@ -5146,7 +5212,7 @@ export default function MindShift360() {
                     </div>
                   )}
 
-                  {missionWizardStep === 2 && (
+                  {missionWizardStep === 3 && (
                     <div className="space-y-2.5">
                       <select
                         value={missionDraft.deadlineDays}
@@ -5194,16 +5260,22 @@ export default function MindShift360() {
                     </div>
                   )}
 
-                  {missionWizardStep === 3 && (
+                  {missionWizardStep === 4 && (
                     <div className="space-y-2.5">
                       <div className="rounded-xl border border-gray-800 bg-black/20 p-2.5">
                         <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-1.5">Wire Preview</p>
                         <div className="space-y-1 text-[11px]">
                           <p className="text-white">
+                            <span className="text-gray-500">Mindset:</span> {selectedDraftMindset?.label || "—"}
+                          </p>
+                          <p className="text-white">
                             <span className="text-gray-500">Title:</span> {missionDraft.title || "—"}
                           </p>
                           <p className="text-white">
                             <span className="text-gray-500">Alliance:</span> {selectedDraftAlliance?.name || "—"}
+                          </p>
+                          <p className="text-white">
+                            <span className="text-gray-500">Belief:</span> {missionDraft.beliefNote.trim() || "—"}
                           </p>
                           <p className="text-white">
                             <span className="text-gray-500">Deadline:</span> {missionDraft.deadlineDays} days
