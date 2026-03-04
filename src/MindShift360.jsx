@@ -3158,7 +3158,7 @@ export default function MindShift360() {
           }}
         />
         <div className="relative min-h-screen flex items-start md:items-center justify-center px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto">
-          <div className="w-full max-w-6xl card p-4 sm:p-5 md:p-8 my-auto" style={{ background: "linear-gradient(135deg, rgba(5,20,35,0.84), rgba(14,28,48,0.78))", borderColor: "rgba(16,185,129,0.24)" }}>
+          <div className="w-full max-w-6xl card p-4 sm:p-5 md:p-8 my-auto shadow-[0_24px_80px_rgba(0,0,0,0.45)]" style={{ background: "linear-gradient(135deg, rgba(5,20,35,0.56), rgba(14,28,48,0.5))", borderColor: "rgba(16,185,129,0.24)" }}>
             <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-4 md:gap-5 items-stretch">
               <div className="rounded-2xl border border-white/10 bg-black/15 p-4 sm:p-5 md:p-7 flex flex-col justify-between">
                 <div>
@@ -3188,7 +3188,7 @@ export default function MindShift360() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-gray-950/70 p-4 sm:p-5 md:p-6">
+              <div className="rounded-2xl border border-white/10 bg-gray-950/55 backdrop-blur-sm p-4 sm:p-5 md:p-6">
                 <div className="flex gap-2 mb-4">
                   <button
                     onClick={() => setLandingAuthMode("signup")}
