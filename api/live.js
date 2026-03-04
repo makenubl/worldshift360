@@ -57,12 +57,12 @@ function computeLivePayload(nowMs) {
   const launchEpochMs = Date.UTC(2026, 0, 1, 0, 0, 0);
   const elapsedMinutes = Math.max(0, Math.floor((nowMs - launchEpochMs) / 60000));
   const minute = elapsedMinutes;
-  const second = Math.floor(nowMs / 1000);
+  const secondOfMinute = Math.floor((nowMs / 1000) % 60);
   const cycleA = Math.sin(minute / 6);
   const cycleB = Math.cos(minute / 11);
 
   const minds = 847293 + Math.floor(minute * 0.9) + Math.floor((cycleA + 1) * 19);
-  const interactions = 2847291 + minute * 19 + second * 2 + Math.floor((cycleB + 1) * 140);
+  const interactions = 2847291 + minute * 19 + secondOfMinute * 2 + Math.floor((cycleB + 1) * 140);
   const accuracy = Number((78.2 + ((Math.sin(minute / 23) + 1) * 0.95)).toFixed(2));
 
   const onlineNow = 12200 + Math.floor((cycleA + 1) * 520) + Math.floor((Math.sin(second / 9) + 1) * 90);
