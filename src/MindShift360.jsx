@@ -1323,7 +1323,7 @@ const formatActivityAge = (ageSec) => {
   return `${Math.floor(ageSec / 60)}m ago`;
 };
 
-const createMissionInviteCode = (title = "mission") => {
+const createMissionInviteCode = (title = "wire") => {
   const slug = title.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 4) || "MSN";
   const nonce = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `${slug}-${nonce}`;
@@ -1348,7 +1348,7 @@ const buildSeedMissionThreads = () => {
           id: `${mission.id}_ai_boot`,
           role: "ai",
           user: { name: "Rewire AI Ops", avatar: "🤖" },
-          text: `AI kickoff: ${mission.title}. Priority action is to ship one measurable deliverable in the next 24h.`,
+          text: `AI kickoff for wire "${mission.title}". Priority action is to ship one measurable deliverable in the next 24h.`,
           time: "live",
           likes: 0,
         },
@@ -1397,7 +1397,7 @@ const buildSeedAllianceThreads = () =>
   );
 
 const createMissionAiReply = (mission, actorName) =>
-  `AI next action: ${actorName} now owns checkpoint 1 for "${mission.title}". Submit proof with metrics to unlock treasury release.`;
+  `AI next action: ${actorName} now owns checkpoint 1 for wire "${mission.title}". Submit proof with metrics to unlock treasury release.`;
 
 const createAllianceAiReply = (alliance, actorName) =>
   `AI directive: ${actorName}, align your next action with ${alliance.name}'s commitments and publish one measurable outcome in 24h.`;
@@ -1926,7 +1926,7 @@ export default function MindShift360() {
               id: `${mission.id}_boot_ai`,
               role: "ai",
               user: { name: "Rewire AI Ops", avatar: "🤖" },
-              text: `Mission "${mission.title}" is live. Claim role, execute one deliverable, and log proof for treasury release.`,
+              text: `Wire "${mission.title}" is live. Claim role, execute one deliverable, and log proof for treasury release.`,
               time: "live",
               likes: 0,
             },
@@ -2055,7 +2055,7 @@ export default function MindShift360() {
           id: `${mission.id}_ai_launch`,
           role: "ai",
           user: { name: "Rewire AI Ops", avatar: "🤖" },
-          text: `Mission launched. Escrow locked: ${escrowStake} ${JOULE.ticker}. Share invite code ${inviteCode} to recruit execution partners.`,
+          text: `Wire launched. Escrow locked: ${escrowStake} ${JOULE.ticker}. Share invite code ${inviteCode} to recruit execution partners.`,
           time: "just now",
           likes: 0,
         },
@@ -2309,7 +2309,7 @@ export default function MindShift360() {
               id: `${mission.id}_join_${Date.now()}`,
               role: "member",
               user: { name: profile.name, avatar: AVATARS[(profile.name?.length || 0) % AVATARS.length] },
-              text: `Joined mission execution. ${source === "invite" ? `Invite accepted (+${INVITE_JOIN_BONUS} ${JOULE.ticker}).` : "Ready for first checkpoint."}`,
+              text: `Joined wire execution. ${source === "invite" ? `Invite accepted (+${INVITE_JOIN_BONUS} ${JOULE.ticker}).` : "Ready for first checkpoint."}`,
               time: "just now",
               likes: 0,
             },
@@ -2876,7 +2876,7 @@ export default function MindShift360() {
             </h2>
             <p className="text-blue-100/80 text-sm mb-3 max-w-3xl">
               Individuals now have AI leverage. The next step is local nucleus communities with practical systems for food,
-              water, energy, and logistics. Join missions, ship proof, and earn reputation.
+              water, energy, and logistics. Join wires, ship proof, and earn reputation.
             </p>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
@@ -2885,7 +2885,7 @@ export default function MindShift360() {
                 <p className="text-white text-sm font-mono font-semibold">{livePresence.onlineNow.toLocaleString()}</p>
               </div>
               <div className="rounded-xl bg-black/25 border border-white/10 p-2.5">
-                <p className="text-[11px] text-blue-200/70 uppercase tracking-wider">Active missions</p>
+                <p className="text-[11px] text-blue-200/70 uppercase tracking-wider">Active wires</p>
                 <p className="text-white text-sm font-mono font-semibold">{SEED_MISSIONS.length}</p>
               </div>
               <div className="rounded-xl bg-black/25 border border-white/10 p-2.5">
@@ -2917,7 +2917,7 @@ export default function MindShift360() {
               </div>
               <div className="rounded-xl p-3 bg-emerald-900/20 border border-emerald-500/25">
                 <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1">Rewire</p>
-                <p className="text-gray-200 text-xs">Join mission → submit proof → claim reward → build compounding credibility.</p>
+                <p className="text-gray-200 text-xs">Join wire → submit proof → claim reward → build compounding credibility.</p>
               </div>
             </div>
 
@@ -2950,7 +2950,7 @@ export default function MindShift360() {
                 onClick={() => setTab("world")}
                 className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm font-semibold rounded-xl hover:from-emerald-500 hover:to-blue-500 transition-all"
               >
-                Open Missions
+                Open Wires
               </button>
               {!profile && (
                 <button
@@ -3013,7 +3013,7 @@ export default function MindShift360() {
             <div className="grid gap-2 mb-3 md:grid-cols-3">
               <div className="rounded-xl bg-emerald-950/15 border border-emerald-500/20 p-3">
                 <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1">Benefit 01</p>
-                <p className="text-gray-200 text-xs">Earn via mission payouts and transparent treasury allocations.</p>
+                <p className="text-gray-200 text-xs">Earn via wire payouts and transparent treasury allocations.</p>
               </div>
               <div className="rounded-xl bg-blue-950/15 border border-blue-500/20 p-3">
                 <p className="text-blue-300 text-xs font-semibold uppercase tracking-wider mb-1">Benefit 02</p>
@@ -3058,7 +3058,7 @@ export default function MindShift360() {
                 </span>
                 <span className="text-gray-600">→</span>
                 <span className="px-2 py-1 rounded-lg bg-blue-900/30 border border-blue-500/20 text-blue-200">
-                  Mission Escrow: {treasuryFlow.missionEscrow.toLocaleString(undefined, { maximumFractionDigits: 2 })}M
+                  Wire Escrow: {treasuryFlow.missionEscrow.toLocaleString(undefined, { maximumFractionDigits: 2 })}M
                 </span>
                 <span className="text-gray-600">→</span>
                 <span className="px-2 py-1 rounded-lg bg-emerald-900/30 border border-emerald-500/20 text-emerald-200">
@@ -3881,7 +3881,7 @@ export default function MindShift360() {
                 onClick={() => (profile ? setTab("feed") : setShowOnboard(true))}
                 className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-sm rounded-xl hover:from-emerald-500 hover:to-blue-500 transition-all"
               >
-                {profile ? "Go To Feed Missions" : "Join Rewire"}
+                {profile ? "Go To Feed Wires" : "Join Rewire"}
               </button>
             </div>
           </div>
@@ -4449,10 +4449,10 @@ export default function MindShift360() {
             <div>
               <h2 className="text-white font-bold text-base flex items-center gap-2">
                 <Briefcase size={15} className="text-emerald-400" />
-                Mission Launchpad (Create + Invite)
+                Wire Launchpad (Create + Invite)
               </h2>
               <p className="text-gray-500 text-xs">
-                Build a mission, invite execution partners, coordinate with AI, and settle rewards in {JOULE.ticker}.
+                Build a wire, invite execution partners, coordinate with AI, and settle rewards in {JOULE.ticker}.
               </p>
             </div>
             <div className="text-right">
@@ -4485,7 +4485,7 @@ export default function MindShift360() {
           </div>
 
           <div className="rounded-xl border border-gray-800 bg-gray-900/45 p-3 mb-3">
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Join by Invite</p>
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Join Wire by Invite</p>
             <div className="flex gap-2">
               <input
                 value={inviteCodeInput}
@@ -4511,12 +4511,12 @@ export default function MindShift360() {
           {profile ? (
             <div className="rounded-xl border border-gray-800 bg-gray-900/45 p-3 mb-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-gray-300 text-xs font-semibold uppercase tracking-wider">Create Mission</p>
+                <p className="text-gray-300 text-xs font-semibold uppercase tracking-wider">Create Wire</p>
                 <button
                   onClick={() => setShowMissionBuilder((prev) => !prev)}
                   className="px-2.5 py-1 rounded-lg text-xs bg-emerald-600 hover:bg-emerald-500 text-white transition-all"
                 >
-                  {showMissionBuilder ? "Hide Builder" : "Open Builder"}
+                  {showMissionBuilder ? "Hide Builder" : "Open Wire Builder"}
                 </button>
               </div>
 
@@ -4525,13 +4525,13 @@ export default function MindShift360() {
                   <input
                     value={missionDraft.title}
                     onChange={(event) => setMissionDraft((draft) => ({ ...draft, title: event.target.value }))}
-                    placeholder="Mission title"
+                    placeholder="Wire title"
                     className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30"
                   />
                   <textarea
                     value={missionDraft.summary}
                     onChange={(event) => setMissionDraft((draft) => ({ ...draft, summary: event.target.value }))}
-                    placeholder="Mission objective and expected measurable outcome"
+                    placeholder="Wire objective and expected measurable outcome"
                     className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500/30 resize-none min-h-[66px]"
                   />
                   <div className="grid md:grid-cols-2 gap-2">
@@ -4597,7 +4597,7 @@ export default function MindShift360() {
                     }
                     className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white text-sm font-semibold transition-all"
                   >
-                    Launch Mission + Generate Invite
+                    Launch Wire + Generate Invite
                   </button>
                   {walletJoules < Math.max(20, Math.round((Number(missionDraft.rewardJou) || 0) * 0.3)) && (
                     <p className="text-red-300 text-[11px]">
@@ -4612,7 +4612,7 @@ export default function MindShift360() {
               onClick={() => setShowOnboard(true)}
               className="w-full mb-3 py-2 bg-gray-800 text-gray-300 rounded-xl text-sm hover:bg-gray-700 transition-all"
             >
-              Join to create missions and receive starter {STARTER_JOULE_GRANT} {JOULE.ticker}
+              Join to create wires and receive starter {STARTER_JOULE_GRANT} {JOULE.ticker}
             </button>
           )}
 
@@ -4661,7 +4661,7 @@ export default function MindShift360() {
                   {mission.inviteCode && (
                     <div className="flex items-center gap-2 mb-2">
                       <span className="px-2 py-0.5 rounded-lg text-[11px] bg-yellow-500/10 text-yellow-300 border border-yellow-500/20">
-                        Invite: {mission.inviteCode}
+                        Wire Invite: {mission.inviteCode}
                       </span>
                       <button
                         onClick={() => copyMissionInviteLink(mission.inviteCode)}
@@ -4688,7 +4688,7 @@ export default function MindShift360() {
                       onClick={() => joinMission(mission)}
                       className="w-full py-2 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white text-xs font-semibold rounded-xl transition-all"
                     >
-                      Join Mission (+{Math.floor(INVITE_JOIN_BONUS / 2)} {JOULE.ticker})
+                      Join Wire (+{Math.floor(INVITE_JOIN_BONUS / 2)} {JOULE.ticker})
                     </button>
                   )}
 
@@ -4733,7 +4733,7 @@ export default function MindShift360() {
                   )}
 
                   <div className="mt-3 pt-2 border-t border-gray-800/60">
-                    <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-1.5">Mission Thread (Human + AI)</p>
+                    <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-1.5">Wire Thread (Human + AI)</p>
                     <div className="space-y-1.5 mb-2">
                       {missionThread.slice(0, 4).map((entry) => (
                         <div key={entry.id} className="rounded-lg bg-gray-900/50 border border-gray-800 px-2.5 py-2">
@@ -4790,7 +4790,7 @@ export default function MindShift360() {
                       <span className="text-gray-600 text-xs">·</span>
                       <span className="text-gray-500 text-xs">{proof.time}</span>
                     </div>
-                    <p className="text-emerald-300 text-[11px] mb-1">{mission?.title || "Mission"}</p>
+                    <p className="text-emerald-300 text-[11px] mb-1">{mission?.title || "Wire"}</p>
                     <p className="text-gray-400 text-xs leading-relaxed">{proof.proof}</p>
                   </div>
                 );
